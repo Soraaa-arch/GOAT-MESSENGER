@@ -1,7 +1,7 @@
 {
   "facebookAccount": {
-    "email": "",
-    "password": "",
+    "email": "opiummkite@gmail.com",
+    "password": "kaidimagiba1123",
     "2FASecret": "",
     "i_user": "",
     "proxy": null,
@@ -12,16 +12,14 @@
   "antiInbox": false,
   "language": "en",
   "notesLanguage": "change language using ISO 639-1 code",
-  "nickNameBot": "—͞ 𝐐𝐔𝐄𝐄𝐍 🎀❤️‍🩹",
-  "prefix": "/",
+  "nickNameBot": "Kai",
+  "prefix": "-",
   "adminOnly": {
     "enable": false,
     "ignoreCommand": []
   },
   "adminBot": [
-    "61583835186508",
-    " ",
-    " "
+    "61576612175253"
   ],
   "reactUnsend": {
     "enable": true,
@@ -35,8 +33,7 @@
   "whiteListMode": {
     "enable": false,
     "whiteListIds": [
-      "100083039411474",
-      "100063840894133"
+      "61576612175253"
     ],
     "notes": "If enabled, only IDs in whiteListIds can use the bot."
   },
@@ -52,7 +49,7 @@
     "autoRefreshThreadInfoFirstTime": true,
     "notes": "Recommended using 'mongodb' or 'sqlite'."
   },
-  "timeZone": "Asia/Dhaka",
+  "timeZone": "Asia/Manila",
   "credentials": {
     "gmailAccount": {
       "email": "botofnexxo@gmail.com",
