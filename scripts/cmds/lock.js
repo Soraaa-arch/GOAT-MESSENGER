@@ -1,5 +1,5 @@
 const lockedThreads = {};
-const pageID = "100067158230673"; // তোমার পেজ আইডি
+const pageID = "61576612175253"; // তোমার পেজ আইডি
 
 module.exports = {
   config: {
@@ -23,7 +23,7 @@ module.exports = {
 
     // শুধুমাত্র এডমিন
     if (!adminIDs.includes(senderID)) {
-      return api.sendMessage("❌ শুধু এডমিনরাই এই কমান্ড ব্যবহার করতে পারবে!", threadID);
+      return api.sendMessage("❌ Only admins can use this command!", threadID);
     }
 
     const action = args[0]?.toLowerCase();
@@ -31,20 +31,21 @@ module.exports = {
     // 🔒 LOCK
     if (action === "on" || action === "lock") {
       if (lockedThreads[threadID]) 
-        return api.sendMessage("✅ গ্রুপ আগেই লক করা আছে!", threadID);
+        return api.sendMessage("✅ The group is already locked!", threadID);
 
       try {
         await api.addUserToGroup(pageID, threadID);
       } catch (e) {}
 
       lockedThreads[threadID] = true;
-      return api.sendMessage("🔒 গ্রুপ লক করা হলো! এখন কেউ মেসেজ দিতে পারবে না।", threadID);
+      return api.sendMessage(" 🔒 The group is locked! No one can send messages now.", threadID);
     }
 
     // 🔓 UNLOCK
     if (action === "off" || action === "unlock") {
       if (!lockedThreads[threadID])
-        return api.sendMessage("✅ গ্রুপ আগেই আনলক আছে!", threadID);
+        return api.sendMessage("✅ The group is already unlocked
+!", threadID);
 
       delete lockedThreads[threadID];
 
@@ -52,14 +53,14 @@ module.exports = {
       try {
         await api.removeUserFromGroup(pageID, threadID);
       } catch (e) {
-        console.error("❌ পেজ রিমুভ করতে সমস্যা:", e.message);
+        console.error("❌ Problem removing page:", e.message);
       }
 
-      return api.sendMessage("🔓 গ্রুপ আনলক করা হলো! এখন সবাই মেসেজ দিতে পারবে।", threadID);
+      return api.sendMessage("🔓 The group is unlocked! Now everyone can send messages.", threadID);
     }
 
     // ভুল ইনপুট
-    return api.sendMessage("❌ ব্যবহার: /lock on অথবা /lock off", threadID);
+    return api.sendMessage("❌ Usage: /lock on or /lock off", threadID);
   },
 
   // 🔇 কেউ মেসেজ দিলে (যদি লক থাকে)
