@@ -1,139 +1,129 @@
-const fs = require("fs-extra");
-const path = require("path");
-const https = require("https");
+const fs = require('fs');
+const path = require('path');
+const { utils } = global;
 
 module.exports = {
   config: {
     name: "help",
-    aliases: ["menu", "commands"],
-    version: "6.2",
-    author: "EryXenX",
-    shortDescription: "Show all commands",
-    longDescription: "Show all commands in clean UI",
-    category: "system",
-    guide: "{pn}help [command name]"
+    version: "2.9",
+    role: 0,
+    countdown: 0,
+    author: "Rakib Adil", // if you change this u'r gay
+    description: "Displays all available commands and their categories in a premium style.",
+    category: "help",
   },
+  
+  onStart: async ({ api, event, args }) => {
+    const cmdsFolderPath = path.join(__dirname, '.');
+    const files = fs.readdirSync(cmdsFolderPath).filter(file => file.endsWith('.js') && file !== "help.js");
+    
+    const safeRequire = (filePath) => {
+      try {
+        const cmd = require(filePath);
+        return cmd && cmd.config ? cmd : null;
+      } catch (e) {
+        console.error("❌ Failed to load command:", filePath, e);
+        return null;
+      }
+    };
+    
+    const commands = files.map(file => safeRequire(path.join(cmdsFolderPath, file))).filter(Boolean);
+    
+    const getCategories = () => {
+      const categories = {};
+      for (const command of commands) {
+        const categoryName = command.config.category || 'Uncategorized';
+        if (!categories[categoryName]) categories[categoryName] = [];
+        categories[categoryName].push(command.config.name);
+      }
+      return categories;
+    };
+    
+    // Modified sendMessage to support attachment
+    const sendMessage = async (message, attachmentUrl = null) => {
+      try {
+        const msgObj = { body: message };
+        if (attachmentUrl) {
+          msgObj.attachment = await utils.getStreamFromURL(attachmentUrl);
+        }
+        return await api.sendMessage(msgObj, event.threadID);
+      } catch (error) {
+        console.error('Error sending message:', error);
+      }
+    };
+    
+    try {
+      if (args.length > 1 && args.includes('|')) {
+        const pipeIndex = args.indexOf('|');
+        const categoryName = args.slice(pipeIndex + 1).join(' ').toLowerCase();
+        const categories = getCategories();
+        const category = Object.keys(categories).find(cat => cat.toLowerCase() === categoryName);
+        
+        if (category) {
+          let msg = `╭───『 ${category.toUpperCase()} 』\n`;
+          msg += `✧ ${categories[category].join(' ✧ ')}\n`;
+          msg += "╰──────────────◊\n";
+          msg += `(Total: ${categories[category].length} cmds)`;
+          return sendMessage(msg);
+        } else {
+          return sendMessage(`❌ Category not found: ${categoryName}`);
+        }
+      }
+      
+      if (args[0]) {
+        const commandName = args[0].toLowerCase();
+        const command = commands.find(cmd =>
+          cmd.config.name.toLowerCase() === commandName ||
+          (cmd.config.aliases && cmd.config.aliases.includes(commandName))
+        );
+        
+        if (!command) return sendMessage(`❌ Command not found: ${commandName}`);
+        
+        const usage = command.config.guide?.en || command.config.guide;
+        let details = `╭───────────────────◊\n│ 🔹 COMMAND DETAILS\n├───────────────────◊\n`;
+        details += `│ ⚡ Name: ${command.config.name}\n`;
+        details += `│ 📝 Version: ${command.config.version || 'N/A'}\n`;
+        details += `│ 👤 Author: ${command.config.author || 'Unknown'}\n`;
+        details += `│ 🔐 Role: ${command.config.role ?? 'N/A'}\n`;
+        details += `│ 📂 Category: ${command.config.category || 'Uncategorized'}\n`;
+        if (command.config.aliases?.length) details += `│ 🔄 Aliases: ${command.config.aliases.join(', ')}\n`;
+        if (command.config.countDown !== undefined) details += `│ ⏱️ Cooldown: ${command.config.countDown}s\n`;
+        details += `│🧬 Usage: ${usage}\n`
+        details += `╰───────────────────◊\n💫 KIV BOT Command Info`;
+        return sendMessage(details);
+      }
+      
+      const categories = getCategories();
+      let helpMessage = '';
+      for (const category in categories) {
+        helpMessage += `╭──『 ${category.toUpperCase()} 』\n`;
+        helpMessage += `✧ ${categories[category].join(' ✧ ')}\n`;
+        helpMessage += "╰──────────────◊\n";
+        helpMessage += `(Total: ${categories[category].length} cmds)\n\n`;
+      }
+      helpMessage += "╭────────────◊\n";
+      helpMessage += "│ » Type [ /help <cmd> ] for usage\n";
+      helpMessage += "│ » Type [ /help | category ] for category cmds\n";
+      helpMessage += "│ » Owner Contact: https://web.facebook.com/61576612175253\n";
+      helpMessage += "│ » Join Support GC: Null\n";
+      helpMessage += "╰────────────◊\n";
+      helpMessage += "          「  KAI BOT 」";
+      
+      /* Add your video/image/gif URL here
+      const imgUrl =[
+        
+      ];
+      
+     // const rndmImg = imgUrl[Math.floor(Math.random() * imgUrl.length)];
 
-  onStart: async function ({ message, args, prefix }) {
-    const allCommands = global.GoatBot.commands;
-
-    const fancyFont = (str) =>
-      str.replace(/[A-Za-z]/g, (c) => {
-        const map = {
-          A:"𝐀",B:"𝐁",C:"𝐂",D:"𝐃",E:"𝐄",F:"𝐅",G:"𝐆",H:"𝐇",
-          I:"𝐈",J:"𝐉",K:"𝐊",L:"𝐋",M:"𝐌",N:"𝐍",O:"𝐎",P:"𝐏",
-          Q:"𝐐",R:"𝐑",S:"𝐒",T:"𝐓",U:"𝐔",V:"𝐕",W:"𝐖",X:"𝐗",
-          Y:"𝐘",Z:"𝐙",
-          a:"𝐚",b:"𝐛",c:"𝐜",d:"𝐝",e:"𝐞",f:"𝐟",g:"𝐠",h:"𝐡",
-          i:"𝐢",j:"𝐣",k:"𝐤",l:"𝐥",m:"𝐦",n:"𝐧",o:"𝐨",p:"𝐩",
-          q:"𝐪",r:"𝐫",s:"𝐬",t:"𝐭",u:"𝐮",v:"𝐯",w:"𝐰",x:"𝐱",
-          y:"𝐲",z:"𝐳"
-        };
-        return map[c] || c;
-      });
-
-    const categoryFont = (str) =>
-      str.split("").map(c => {
-        const map = {
-          A:"𝙰",B:"𝙱",C:"𝙲",D:"𝙳",E:"𝙴",F:"𝙵",G:"𝙶",H:"𝙷",
-          I:"𝙸",J:"𝙹",K:"𝙺",L:"𝙻",M:"𝙼",N:"𝙽",O:"𝙾",P:"𝙿",
-          Q:"𝚀",R:"𝚁",S:"𝚂",T:"𝚃",U:"𝚄",V:"𝚅",W:"𝚆",X:"𝚇",
-          Y:"𝚈",Z:"𝚉"
-        };
-        return map[c] || c;
-      }).join("");
-
-    const cleanCategoryName = (text) => text ? text.toLowerCase() : "others";
-
-    if (args[0]) {
-      const cmdName = args[0].toLowerCase();
-      const cmd =
-        allCommands.get(cmdName) ||
-        [...allCommands.values()].find(c => c.config.aliases?.includes(cmdName));
-
-      if (!cmd)
-        return message.reply(`❌ Command '${cmdName}' not found!`);
-
-      const usage = typeof cmd.config.guide === "string"
-        ? cmd.config.guide.replace("{pn}", cmd.config.name)
-        : cmd.config.name;
-
-      const infoMsg =
-`╭─ 𝐂𝐎𝐌𝐌𝐀𝐍𝐃 𝐈𝐍𝐅𝐎
-│ 🧩 ${fancyFont(cmd.config.name)}
-│ 🔗 ${cmd.config.aliases?.join(", ") || "None"}
-│ 📁 ${categoryFont((cmd.config.category || "Others").toUpperCase())}
-│ ⚙️ v${cmd.config.version || "1.0"}
-│ 👑 ${cmd.config.author || "Unknown"}
-│ 📝 ${(cmd.config.longDescription || cmd.config.shortDescription || "No description").slice(0, 40)}
-│ 🚀 ${prefix}${usage}
-╰────────────`;
-
-      return message.reply(infoMsg);
+       if you want to use image/video/gif with help list just delete the (//) and the :ext line after this
+        */
+    // return sendMessage(helpMessage, rndmImg)
+      return sendMessage(helpMessage);
+      
+    } catch (error) {
+      console.error('❌ Error in help command:', error);
+      return sendMessage('⚠️ An error occurred while generating the help message.');
     }
-
-    const categories = {};
-
-    for (const [name, cmd] of allCommands) {
-      const cat = cleanCategoryName(cmd.config.category);
-      if (!categories[cat]) categories[cat] = [];
-      categories[cat].push(name);
-    }
-
-    const formatCommands = (cmds) =>
-      cmds.sort().map(c => `• ${fancyFont(c)}`).join("\n");
-
-    let msg =
-`╭─ 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐒
-│ 🔧 ${prefix}
-│ 📊 ${allCommands.size} commands
-╰────────────\n`;
-
-    for (const cat of Object.keys(categories)) {
-      msg += `\n${categoryFont(cat.toUpperCase())}\n`;
-      msg += formatCommands(categories[cat]) + "\n";
-    }
-
-    msg += `\nUse: ${prefix}help <command>`;
-
-    const gifURLs = [
-      "",
-      "",
-      ""
-    ];
-
-    const randomGifURL = gifURLs[Math.floor(Math.random() * gifURLs.length)];
-    const gifFolder = path.join(__dirname, "cache");
-
-    if (!fs.existsSync(gifFolder))
-      fs.mkdirSync(gifFolder, { recursive: true });
-
-    const gifName = path.basename(randomGifURL);
-    const gifPath = path.join(gifFolder, gifName);
-
-    if (!fs.existsSync(gifPath))
-      await downloadGif(randomGifURL, gifPath);
-
-    return message.reply({
-      body: msg,
-      attachment: fs.createReadStream(gifPath)
-    });
   }
 };
-
-function downloadGif(url, dest) {
-  return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(dest);
-    https.get(url, (res) => {
-      if (res.statusCode !== 200) {
-        fs.unlink(dest, () => {});
-        return reject();
-      }
-      res.pipe(file);
-      file.on("finish", () => file.close(resolve));
-    }).on("error", (err) => {
-      fs.unlink(dest, () => {});
-      reject(err);
-    });
-  });
-}
