@@ -4,7 +4,7 @@ module.exports = {
     aliases: ["chud"],
     version: "1.0",
     author: "nexo_here",
-    role: 2,
+    role: 0,
     category: "admin",
     guide: {
       vi: "Not Available",
@@ -19,46 +19,26 @@ module.exports = {
     var arraytag = []; 
         arraytag.push({id: mention, tag: name});
     var a = function (a) { api.sendMessage(a, event.threadID); }
-setTimeout(() => {a({body: "কিরে মাদারচোত আকাশ এর চুদন খাওয়ায় জন্য রেডি তো?" + "লে চুদা খা মাঙ্গের বেটা 😂😂" + name, mentions: arraytag})}, 3000);
-setTimeout(() => {a({body: "মাঘি চুদা শরের বাচ্চা কার লগে পঙ্গা নিতে আসছিস 🤬🤬🤬" + " " + name, mentions: arraytag})}, 5000);
-setTimeout(() => {a({body: " চুদে গুহা ফাঁক করে দিব খানকীর পোলা 🤤" + " " + name, mentions: arraytag})}, 7000);
-setTimeout(() => {a({body: " মাদারচোত বোকাচোদা খানকীর পোলা " + " " + name, mentions: arraytag})}, 9000);
-setTimeout(() => {a({body: " বেসসা মাঘী চোদা কুত্তা চোদা" + " " + name, mentions: arraytag})}, 12000);
-setTimeout(() => {a({body: " ছাগল চুদা গরু চুদা মাঙ্গের বেটা লোকজন দেখে লাগতে আসিস কুত্তার বাচ্চা 🤬" + " " + name, mentions: arraytag})}, 14000);
-setTimeout(() => {a({body: " তোর আব্বুকে ভুলে গেলি মাদারচোত 😂" + " " + name, mentions: arraytag})}, 16000);
-setTimeout(() => {a({body: " তোকে কনডম ছাড়া চুদী মঙ্গের বেটা 🖕🏿" + " " + name, mentions: arraytag})}, 18000);
-setTimeout(() => {a({body: " আমার ধন চুষ তাইলে থামবো 😂" + " " + name, mentions: arraytag})}, 20000);
-setTimeout(() => {a({body: " তোরে কুত্তা দিয়ে চোদাই 😍" + " " + name, mentions: arraytag})}, 22000);
-setTimeout(() => {a({body: " মাঘীর মাং চাটিস বোকাচোদার বাচ্চা তোকে কন্ডম ছাড়া উল্টা করে চুদি 🤬" + " " + name, mentions: arraytag})}, 2400);
-setTimeout(() => {a({body: " এখনো সময় আছে মাফ চা 🤣🤣" + " " + name, mentions: arraytag})}, 26000);
-setTimeout(() => {a({body: " তোর নানি কেমন আছে 😍??" + " " + name, mentions: arraytag})}, 28000);
-setTimeout(() => {a({body: " তোকে চুদী 🥰" + " " + name, mentions: arraytag})}, 30000);
-setTimeout(() => {a({body: " মাদারচোত 🥰" + " " + name, mentions: arraytag})}, 32000);
-setTimeout(() => {a({body: " আব্বা কে ভুলিস না 🤬" + " " + name, mentions: arraytag})}, 65000);
-setTimeout(() => {a({body: " আজকের চুদন আজীবন মনে রাখিস বোকাচোদা 🤣🤣🤣" + " " + name, mentions: arraytag})}, 34000);
-setTimeout(() => {a({body: "মাঘা 🥰" + " " + name, mentions: arraytag})}, 36000);
-setTimeout(() => {a({body: " আয় আমার হোল টা চুষে দে 🥵🥵" + " " + name, mentions: arraytag})}, 38000);
-setTimeout(() => {a({body: " বাপ কে ভুলিস না বোকাচোদার বাচ্চা 🤬🤬🤬🤬🤬" + " " + name, mentions: arraytag})}, 40000);
-setTimeout(() => {a({body: " হোল কাটে নিবো 🤬🤬🤬🤬🤬🤬" + " " + name, mentions: arraytag})}, 44000);
-setTimeout(() => {a({body: " তোমার গুষ্টি চুদী ব্রো 😞🖕🏿" + " " + name, mentions: arraytag})}, 460000);
-setTimeout(() => {a({body: "🖕🏿🖕🏿🖕🏿🖕🏿🖕🏿🖕🏿🖕🏿🖕🏿🖕🏿" + " " + name, mentions: arraytag})}, 48000);
-setTimeout(() => {a({body: " মাঘীর ছেলে তোর মাকে চুদী 🖕🏽🖕🏽🖕🏽 " + " " + name, mentions: arraytag})} , 50000);
-setTimeout(() => {a({body: " আজকে তোকে প্যান্ট না খুলেই চুদবো 🤬 তোর মাকে একটু আগেই চুঁদে আসলাম 😂" + " " + name, mentions: arraytag})} , 52000);
-setTimeout(() => {a({body: "বোকাচোদার বাচ্চা 😂" + " " + name, mentions: arraytag})} , 56000);
-setTimeout(() => {a({body: " মাদারচোত বোকাচোদা খানকীর ছেলে 🤬" + " " + name, mentions: arraytag})} , 58000);
-setTimeout(() => {a({body: " প্যান্ট ভিজে নাই 🤣🤣🤣🤣🤣🤣🤣???" + " " + name, mentions: arraytag})} , 60000);
-setTimeout(() => {a({body: " আরো চুদন খাইতে চাচ্ছিস ???? " + " " + name, mentions: arraytag})} , 62000);
-setTimeout(() => {a({body: " আয় মাদারচোত আমার ধণ টা চুষে যা 🤬"+ " " + name, mentions: arraytag})} , 64000);
-setTimeout(() => {a({body: " তোকে ডগি স্টাইল e চুদী 😋😋" + " " + name, mentions: arraytag})} , 66000);
-setTimeout(() => {a({body: " তোর আব্বাকে ভুললে আরেকবার এমন চুদন চুদবো মোর যাবি মঙ্গের বেটা 😂😂😂" + " " + name, mentions: arraytag})} , 68000);
-setTimeout(() => {a({body: " আজকের চুদন আজীবন মনে রাখবি 🤣🤣🤣" + " " + name, mentions: arraytag})} , 70000);
-setTimeout(() => {a({body: " আয় আমার ধোন টা চুষে যা মঙ্গের পুত 🤬🤬🤬🤬" + " " + name, mentions: arraytag})} , 72000);
-setTimeout(() => {a({body: " তোরে মুততে মুততে চুদী 🤣🤣" + " " + name, mentions: arraytag})} , 74000);
-setTimeout(() => {a({body: " চুঁদে পাউরুটি বানায় তোর হোগায় ভরে দিব মাঙ্গের বেতা চিনিস আমারে???" + " " + name, mentions: arraytag})} , 76000);
-setTimeout(() => {a({body: " খানকীর পোলা তোর বাপকে ভুলে গেলি?? জন্ম দেওয়া ভুল হইলো 🤬🤬🤬" + " " + name, mentions: arraytag})} , 78000);
-setTimeout(() => {a({body: "বোকাচোদার বাচ্চা 😍" + " " + name, mentions: arraytag})} , 80000);
-setTimeout(() => {a({body: " তোকে চুদী 😍😍😍" + " " + name, mentions: arraytag})} , 82000);
-setTimeout(() => {a({body: " হোল কাটে নিবো মঙ্গের বেটা কার লগে লাগতে আসছিস 🤬" + " " + name, mentions: arraytag})} , 84000);
-setTimeout(() => {a({body: "নেওয়াজ এর চুদন কেমন লাগলো বাচ্চা 🤣🤣🤣🤣??" + " " + name, mentions: arraytag})} , 84000);
+setTimeout(() => {a({body: " ulol gago tarantado tanga bastos walang modo baliw bobo siraulo tang ina ka sinto sinto kulang kulang may sayad abnormal hayop demonyo animal aso pusa baboy daga ibon ahas baka pagong penguin dolpin tigre leon elepante buwaya unggoy bulate kuto zebra dragon camel panda kuwago kuneho ipis lamok turo kabayo bibe manok giraf langaw uod kambing garapata" + "" + name, mentions: arraytag})}, 3000);
+setTimeout(() => {a({body: " Potangina mo bobo wla Kang silbi animal ka yawa Kang Gago ka palamunin kalang Naman sainyo puro kapa dada mag ML bawal lp Dito gago" + " " + name, mentions: arraytag})}, 5000);
+setTimeout(() => {a({body: " Walang papa" + " " + name, mentions: arraytag})}, 7000);
+setTimeout(() => {a({body: " baka umiyak kanang gago ka? " + " " + name, mentions: arraytag})}, 9000);
+setTimeout(() => {a({body: " gagamit na nga lang ng bot hindi pa marunong tanga!" + " " + name, mentions: arraytag})}, 12000);
+setTimeout(() => {a({body: " leave kana baka umiyak kapa" + " " + name, mentions: arraytag})}, 14000);
+setTimeout(() => {a({body: " putanginamo tanga" + " " + name, mentions: arraytag})}, 16000);
+setTimeout(() => {a({body: " stupid bitch ass nigga" + " " + name, mentions: arraytag})}, 18000);
+setTimeout(() => {a({body: " baka hindi kapa tuli puta ka" + " " + name, mentions: arraytag})}, 20000);
+setTimeout(() => {a({body: " gago umiiyak kana? HAHAHAHHAHA" + " " + name, mentions: arraytag})}, 22000);
+setTimeout(() => {a({body: " Ulol gago tarantado tanga bastos walang modo baliw bobo siraulo tangina ka sinto sinto kulangkulang may sayad abnormal hayop demonyo animal Aso't pusa baboy daga Ibon ahas baka pagong Penguin dolphin tegre lion Elepante buwaya unggoy Bulate kuto zebra dragon Camel panda buwitre usa Kuwago kuneho ipis lamok Toro kabayo bibe manok Giraffe langaw uod kambing Garapata kwala kalabaw pating Itik kangaroo oso isda Butiki bubuyog surot linta Pokemon tipaklong tupa uwak Kulisap octopus tuko bayawak Starfish jellyfish langam iguana" + " " + name, mentions: arraytag})}, 2400);
+setTimeout(() => {a({body: " mas magaling pa bot sayo gago" + " " + name, mentions: arraytag})}, 26000);
+setTimeout(() => {a({body: " may tatay kaba?" + " " + name, mentions: arraytag})}, 28000);
+setTimeout(() => {a({body: " baka may sipon sipon kapa kadiri puta" + " " + name, mentions: arraytag})}, 30000);
+setTimeout(() => {a({body: " tamad kang kingina ka" + " " + name, mentions: arraytag})}, 32000);
+setTimeout(() => {a({body: " walang kwenta!" + " " + name, mentions: arraytag})}, 65000);
+setTimeout(() => {a({body: " jakol lang ba alam mo?" + " " + name, mentions: arraytag})}, 34000);
+setTimeout(() => {a({body: " what a stupid bitch" + " " + name, mentions: arraytag})}, 36000);
+setTimeout(() => {a({body: " mamatay na mama mo" + " " + name, mentions: arraytag})}, 38000);
+setTimeout(() => {a({body: " pag ba sinampal kita left and right mananahimik kana?" + " " + name, mentions: arraytag})}, 40000);
+setTimeout(() => {a({body: " bye bitch" + " " + name, mentions: arraytag})}, 44000);
   }
 };
