@@ -1,58 +1,57 @@
-const fs = require("fs");
-
-const balanceFile = __dirname + "/game.json";
-
-function getUserData(uid) {
-  const data = JSON.parse(fs.readFileSync(balanceFile));
-  return data[uid] || { balance: 1000, daily: 0 };
-}
-
-function setUserData(uid, obj) {
-  const data = JSON.parse(fs.readFileSync(balanceFile));
-  data[uid] = obj;
-  fs.writeFileSync(balanceFile, JSON.stringify(data, null, 2));
-}
-
 module.exports.config = {
-  name: "daily",
-  version: "1.0",
-  author: "MOHAMMAD AKASH",
-  role: 0,
-  category: "economy",
-  shortDescription: "Daily bonus reward"
+ name: "daily",
+ aliases: ["claim"],
+ version: "1.0",
+ author: "MOHAMMAD AKASH",
+ countDown: 5,
+ role: 0,
+ shortDescription: "Claim daily reward",
+ category: "economy"
 };
 
-module.exports.onStart = async function ({ api, event }) {
+module.exports.onStart = async function ({ api, event, usersData }) {
+ const { senderID, threadID, messageID } = event;
 
-  const { senderID, threadID, messageID } = event;
+ const cooldown = 24 * 60 * 60 * 1000; // 24h
+ const reward = Math.floor(Math.random() * 5000) + 1000;
 
-  let userData = getUserData(senderID);
+ const userData = await usersData.get(senderID);
 
-  const now = Date.now();
-  const cooldown = 24 * 60 * 60 * 1000;
+ if (!userData.data) userData.data = {};
 
-  if (now - userData.daily < cooldown) {
-    const remaining = cooldown - (now - userData.daily);
-    const hour = Math.floor(remaining / 3600000);
-    const minute = Math.floor((remaining % 3600000) / 60000);
+ const lastClaim = userData.data.lastDaily || 0;
+ const now = Date.now();
 
-    return api.sendMessage(
-      `⏳ You already claimed daily bonus.\n\nCome back after ${hour}h ${minute}m`,
-      threadID,
-      messageID
-    );
-  }
+ if (now - lastClaim < cooldown) {
+ const remaining = cooldown - (now - lastClaim);
 
-  const bonus = 500;
+ const hours = Math.floor(remaining / (1000 * 60 * 60));
+ const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
 
-  userData.balance = (userData.balance || 1000) + bonus;
-  userData.daily = now;
+ return api.sendMessage(
+ `⏳ You already claimed your daily reward!\n🕒 Come back after ${hours}h ${minutes}m`,
+ threadID,
+ messageID
+ );
+ }
 
-  setUserData(senderID, userData);
+ const currentMoney = userData.data.money || 0;
+ const newBalance = currentMoney + reward;
 
-  api.sendMessage(
-    `🎁 Daily Bonus Claimed!\n💰 +${bonus}$ added\n🏦 New Balance: ${userData.balance}$`,
-    threadID,
-    messageID
-  );
+ await usersData.set(senderID, {
+ data: {
+ ...userData.data,
+ money: newBalance,
+ lastDaily: now
+ }
+ });
+
+ api.sendMessage(
+`🎁 Daily Reward Claimed!
+
+💵 Reward: ${reward}$
+🏦 New Balance: ${newBalance}$`,
+ threadID,
+ messageID
+ );
 };
