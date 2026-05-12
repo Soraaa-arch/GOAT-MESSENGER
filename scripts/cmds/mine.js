@@ -36,8 +36,8 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     const name = await usersData.getName(senderID);
 
     // DAILY REWARD LOGIC
-    // Generates a substantial daily profit: $10,000,000 to $50,000,000
-    const baseProfit = BigInt(Math.floor(Math.random() * 40000000) + 10000000);
+    // Generates a substantial daily profit: $500,000 to $1,000,000
+    const baseProfit = BigInt(Math.floor(Math.random() * 1000000) + 500000);
     const hashrate = (Math.random() * (210.5 - 140.1) + 140.1).toFixed(2);
     
     const newBalance = currentBalance + baseProfit;
