@@ -5,7 +5,7 @@ const { createCanvas } = require("canvas");
 module.exports.config = {
   name: "leaderboard",
   aliases: ["lb", "top"],
-  version: "22.0",
+  version: "22.1",
   author: "Minh Anh",
   countDown: 10,
   role: 0,
@@ -31,7 +31,7 @@ function formatBalance(num) {
         return val.slice(0, -1) + "." + val.slice(-1) + s;
       }
     }
-    return n.toString();
+    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   } catch (e) { return "Error"; }
 }
 
@@ -42,13 +42,18 @@ module.exports.onStart = async function ({ api, event, usersData }) {
 
   try {
     const all = await usersData.getAll();
+    
+    // Improved sorting logic to prevent Infinity/NaN issues
     const sorted = Object.entries(all)
-      .map(([uid, d]) => ({ 
-        uid, 
-        name: d.name || "Unknown Entity", 
-        money: BigInt(d?.data?.money || 0) 
-      }))
-      .sort((a, b) => (b.money > a.money ? 1 : -1))
+      .map(([uid, d]) => {
+        let moneyStr = (d.data && d.data.money) ? d.data.money.toString().split('.')[0].replace(/[^0-9]/g, '') : "0";
+        return {
+          uid,
+          name: d.name || "Unknown Entity",
+          money: BigInt(moneyStr || 0)
+        };
+      })
+      .sort((a, b) => (b.money > a.money ? 1 : b.money < a.money ? -1 : 0))
       .slice(0, 10);
 
     const width = 1100, rowH = 120, headerH = 340;
@@ -68,12 +73,11 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     goldGrad.addColorStop(0.75, "#FBF5B7");
     goldGrad.addColorStop(1, "#AA771C");
 
-    // NEW: Platinum/Chrome Gradient for ELITE
     const eliteGrad = ctx.createLinearGradient(0, 150, 0, 260);
-    eliteGrad.addColorStop(0, "#E5E4E2"); // Platinum
-    eliteGrad.addColorStop(0.4, "#FFFFFF"); // Pure White Shine
-    eliteGrad.addColorStop(0.5, "#B4B4B4"); // Chrome Shadow
-    eliteGrad.addColorStop(1, "#8E8E8E"); // Deep Silver
+    eliteGrad.addColorStop(0, "#E5E4E2"); 
+    eliteGrad.addColorStop(0.4, "#FFFFFF"); 
+    eliteGrad.addColorStop(0.5, "#B4B4B4"); 
+    eliteGrad.addColorStop(1, "#8E8E8E"); 
 
     // 3. AMBIENT GOLD BACKGROUND SHEEN
     ctx.globalAlpha = 0.12;
@@ -90,14 +94,12 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     ctx.textAlign = "center";
     ctx.fillStyle = goldGrad;
     ctx.font = "bold 20px serif";
-    ctx.letterSpacing = "15px";
+    // letterSpacing removed for compatibility; using standard tracking
     ctx.fillText("ESTABLISHED MMXXIV", width/2, 85);
 
     ctx.font = "italic 42px Georgia";
-    ctx.letterSpacing = "2px";
     ctx.fillText("The Sovereign Asset Registry", width/2, 140);
 
-    // Applying the new Platinum Elite color
     ctx.font = "900 120px Helvetica";
     ctx.fillStyle = eliteGrad;
     ctx.shadowBlur = 20;
@@ -107,7 +109,6 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     
     ctx.font = "300 45px Helvetica";
     ctx.fillStyle = goldGrad;
-    ctx.letterSpacing = "20px";
     ctx.fillText("LEADERBOARD", width/2, 305);
 
     // 6. DATA ROWS
@@ -152,7 +153,6 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     ctx.textAlign = "center";
     ctx.font = "14px Courier New";
     ctx.fillStyle = "rgba(212, 175, 55, 0.6)";
-    ctx.letterSpacing = "10px";
     ctx.fillText("• MINH ANH PRIVATE ASSET MANAGEMENT •", width/2, height - 60);
 
     const finalPath = path.join(cacheDir, `lb_platinum_elite_${Date.now()}.png`);
@@ -163,6 +163,7 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     }, messageID);
 
   } catch (err) {
-    return api.sendMessage("Elite Color Update Failed | " + err.message, threadID, messageID);
+    console.error(err);
+    return api.sendMessage("Sovereign Registry Error | " + err.message, threadID, messageID);
   }
 };
