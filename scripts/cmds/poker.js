@@ -1,4 +1,4 @@
--install poker.js const fmt = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+const fmt = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
 module.exports = {
   config: {
