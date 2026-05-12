@@ -18,7 +18,7 @@ module.exports = {
     const { threadID, messageID, senderID, mentions } = event;
 
     // --- CONFIGURATION ---
-    const ADMIN_UID = "YOUR_UID_HERE"; // <--- REPLACE THIS WITH YOUR REAL UID
+    const ADMIN_UID = "61576612175253"; // <--- REPLACE THIS WITH YOUR REAL UID
     const TAX_RATE = 0.10; // 10% Tax
     // ---------------------
 
@@ -67,7 +67,7 @@ module.exports = {
       });
 
       // Claim Tax for Admin
-      await usersData.set(61576612175253, {
+      await usersData.set(ADMIN_UID, {
         money: adminBalance.toString(),
         data: { ...adminData.data, money: adminBalance.toString() }
       });
