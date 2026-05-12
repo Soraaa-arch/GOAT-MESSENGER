@@ -3,10 +3,25 @@ const path = require("path");
 const { createCanvas, loadImage } = require("canvas");
 const axios = require("axios");
 
+// Global safety lock to prevent spam if the database fails to save fast enough
+if (!global.milestoneRegistry) global.milestoneRegistry = {};
+
 function getTierData(balance) {
   const n = BigInt(Math.floor(balance));
   if (n >= 10n**100n) return { id: 5, name: "GOOGOL OVERLORD BANK", rank: "COSMIC ENTITY", color: ["#1a0033", "#4b0082"], accent: "#cc00ff", chip: ["#ff00ff", "#ffffff"], text: "#ffffff" };
-  if (n >= 10n**15n) return { id: 4, name: "AETHER PLATINUM BANK", rank: "AETHER ARCHON", color: ["#e0e0e0", "#ffffff"], accent: "#00d4ff", chip: ["#00d4ff", "#ffffff"], text: "#222222" };
+  
+  // AETHER PLATINUM UPGRADE
+  if (n >= 10n**15n) return { 
+    id: 4, 
+    name: "AETHER PLATINUM BANK", 
+    rank: "AETHER ARCHON", 
+    color: ["#cfd9df", "#ffffff", "#e2ebf0"], 
+    accent: "#00d4ff", 
+    chip: ["#00d4ff", "#ffffff"], 
+    text: "#1a1a1a",
+    isAether: true 
+  };
+
   if (n >= 10n**12n) return { id: 3, name: "ZENITH PREMIUM BANK", rank: "TRILLIONAIRE ELITE", color: ["#0a0a0a", "#1a1a1a"], accent: "#D4AF37", chip: ["#BF953F", "#FCF6BA"], text: "#ffffff" };
   if (n >= 10n**9n)  return { id: 2, name: "TITAN IRON BANK", rank: "BILLIONAIRE TYCOON", color: ["#3d3d3d", "#757575"], accent: "#e5e4e2", chip: ["#8e8e8e", "#e0e0e0"], text: "#ffffff" };
   return { id: 1, name: "GOAT DIGITAL BANK", rank: "STANDARD MEMBER", color: ["#0f4c81", "#1c77c3"], accent: "#ffffff", chip: ["#e0e0e0", "#8e8e8e"], text: "#ffffff" };
@@ -24,11 +39,11 @@ function formatBalance(num) {
 module.exports.config = {
   name: "balance",
   aliases: ["bal"],
-  version: "20.0",
+  version: "25.0",
   author: "MOHAMMAD AKASH",
   countDown: 5,
   role: 0,
-  shortDescription: "Evolution Card with Database Memory",
+  shortDescription: "Evolution Card with Global Session Lock",
   category: "economy"
 };
 
@@ -37,18 +52,26 @@ module.exports.onStart = async function ({ api, event, usersData }) {
 
   try {
     const userData = await usersData.get(senderID) || { data: {} };
+    if (!userData.data) userData.data = {};
+    
     const balance = userData.data.money ?? 0;
     const userName = await usersData.getName(senderID);
     const tier = getTierData(balance);
     const formatted = formatBalance(balance);
 
-    // ONE-TIME CONGRATS LOGIC
+    // --- REINFORCED SESSION LOCK ---[cite: 2]
     let bodyText = `Bank Statement for ${userName}:`;
-    const lastAch = parseInt(userData.data.lastAchievement || 0);
+    const lastAch = Number(userData.data.lastAchievement || 0);
+    const currentTierID = Number(tier.id);
+    const sessionKey = `${senderID}_${currentTierID}`;
 
-    if (tier.id > 1 && tier.id > lastAch) {
+    // Condition: Tier > 1 AND Tier > Saved DB Rank AND Tier not already shown this session
+    if (currentTierID > 1 && currentTierID > lastAch && !global.milestoneRegistry[sessionKey]) {
         bodyText = `🎊 NEW TIER UNLOCKED! 🎊\n━━━━━━━━━━━━━━━━━━\nCongratulations ${userName.toUpperCase()}!\nYou have achieved the rank of ${tier.rank}.\nYour ${tier.name} card is now active.`;
-        userData.data.lastAchievement = tier.id;
+        
+        // Lock it in Database AND Global Memory[cite: 1, 2]
+        userData.data.lastAchievement = currentTierID;
+        global.milestoneRegistry[sessionKey] = true; 
         await usersData.set(senderID, userData.data);
     }
 
@@ -57,9 +80,28 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     const ctx = canvas.getContext("2d");
 
     const grad = ctx.createLinearGradient(0, 0, width, height);
-    grad.addColorStop(0, tier.color[0]); grad.addColorStop(1, tier.color[1]);
+    if (tier.isAether) {
+        grad.addColorStop(0, tier.color[0]);
+        grad.addColorStop(0.5, tier.color[1]);
+        grad.addColorStop(1, tier.color[2]);
+    } else {
+        grad.addColorStop(0, tier.color[0]);
+        grad.addColorStop(1, tier.color[1]);
+    }
     ctx.fillStyle = grad;
     ctx.beginPath(); ctx.roundRect(0, 0, width, height, 40); ctx.fill();
+
+    if (tier.isAether) {
+        ctx.strokeStyle = "rgba(0, 212, 255, 0.15)";
+        ctx.lineWidth = 1;
+        for (let i = -width; i < width; i += 40) {
+            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + height, height); ctx.stroke();
+        }
+        const energy = ctx.createRadialGradient(width - 110, 100, 10, width - 110, 100, 150);
+        energy.addColorStop(0, "rgba(0, 212, 255, 0.2)");
+        energy.addColorStop(1, "transparent");
+        ctx.fillStyle = energy; ctx.fillRect(0, 0, width, height);
+    }
 
     ctx.font = "bold 38px Arial"; ctx.fillStyle = tier.accent;
     ctx.fillText(tier.name, 60, 85);
@@ -74,7 +116,7 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     ctx.font = "bold 30px Arial"; ctx.fillText(userName.toUpperCase(), 60, 410);
 
     const boxX = 430, boxY = 280, boxW = 360, boxH = 160;
-    ctx.fillStyle = "rgba(150, 150, 150, 0.15)";
+    ctx.fillStyle = tier.isAether ? "rgba(255, 255, 255, 0.4)" : "rgba(150, 150, 150, 0.15)";
     ctx.beginPath(); ctx.roundRect(boxX, boxY, boxW, boxH, 25); ctx.fill();
     ctx.strokeStyle = tier.accent; ctx.lineWidth = 2; ctx.stroke();
 
