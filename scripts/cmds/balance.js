@@ -3,55 +3,49 @@ const path = require("path");
 const { createCanvas, loadImage } = require("canvas");
 const axios = require("axios");
 
-// Function to generate a unique, realistic 16-digit number based on senderID
-function generateUniqueCardNumber(uid) {
-  const s = uid.toString();
-  // We use parts of the UID and pad it to ensure it's always 16 digits
-  const part1 = s.slice(0, 4).padEnd(4, '0');
-  const part2 = s.slice(4, 8).padEnd(4, '1');
-  const part3 = s.length > 12 ? s.slice(8, 12) : "9901";
-  const part4 = s.slice(-4);
-  return `${part1} ${part2} ${part3} ${part4}`;
+// Path for the memory file
+const memoryPath = path.join(__dirname, "cache", "achievements.json");
+
+// Helper to check/save achievements locally
+function hasBeenNotified(uid, tierID) {
+    if (!fs.existsSync(memoryPath)) fs.writeFileSync(memoryPath, JSON.stringify({}));
+    const data = JSON.parse(fs.readFileSync(memoryPath));
+    if (!data[uid]) data[uid] = 0;
+    
+    if (tierID > data[uid]) {
+        data[uid] = tierID;
+        fs.writeFileSync(memoryPath, JSON.stringify(data, null, 2));
+        return false; // Not notified yet for this tier
+    }
+    return true; // Already notified
+}
+
+function getTierData(balance) {
+  const n = BigInt(Math.floor(balance));
+  if (n >= 10n**100n) return { id: 5, name: "GOOGOL OVERLORD BANK", rank: "COSMIC ENTITY", color: ["#1a0033", "#4b0082"], accent: "#cc00ff", chip: ["#ff00ff", "#ffffff"], text: "#ffffff" };
+  if (n >= 10n**15n) return { id: 4, name: "AETHER PLATINUM BANK", rank: "AETHER ARCHON", color: ["#e0e0e0", "#ffffff"], accent: "#00d4ff", chip: ["#00d4ff", "#ffffff"], text: "#222222" };
+  if (n >= 10n**12n) return { id: 3, name: "ZENITH PREMIUM BANK", rank: "TRILLIONAIRE ELITE", color: ["#0a0a0a", "#1a1a1a"], accent: "#D4AF37", chip: ["#BF953F", "#FCF6BA"], text: "#ffffff" };
+  if (n >= 10n**9n)  return { id: 2, name: "TITAN IRON BANK", rank: "BILLIONAIRE TYCOON", color: ["#3d3d3d", "#757575"], accent: "#e5e4e2", chip: ["#8e8e8e", "#e0e0e0"], text: "#ffffff" };
+  return { id: 1, name: "GOAT DIGITAL BANK", rank: "STANDARD MEMBER", color: ["#0f4c81", "#1c77c3"], accent: "#ffffff", chip: ["#e0e0e0", "#8e8e8e"], text: "#ffffff" };
 }
 
 function formatBalance(num) {
   try {
     const n = BigInt(Math.floor(num));
-    const suffixes = [
-      { value: 10n**100n, symbol: "Googol" },
-      { value: 10n**33n,  symbol: "D" }, 
-      { value: 10n**30n,  symbol: "N" }, 
-      { value: 10n**27n,  symbol: "O" }, 
-      { value: 10n**24n,  symbol: "Spt" }, 
-      { value: 10n**21n,  symbol: "Sx" }, 
-      { value: 10n**18n,  symbol: "Qi" }, 
-      { value: 10n**15n,  symbol: "Q" }, 
-      { value: 10n**12n,  symbol: "T" }, 
-      { value: 10n**9n,   symbol: "B" }, 
-      { value: 10n**6n,   symbol: "M" }, 
-      { value: 10n**3n,   symbol: "K" }
-    ];
-
-    for (const { value, symbol } of suffixes) {
-      if (n >= value) {
-        let res = (n / (value / 10n)).toString();
-        return res.replace(/(\d)$/, ".$1") + symbol;
-      }
-    }
+    const suffixes = [{v: 10n**100n, s: "Googol"}, {v: 10n**15n, s: "Q"}, {v: 10n**12n, s: "T"}, {v: 10n**9n, s: "B"}, {v: 10n**6n, s: "M"}, {v: 10n**3n, s: "K"}];
+    for (const {v, s} of suffixes) { if (n >= v) return (n / (v / 10n)).toString().replace(/(\d)$/, ".$1") + s; }
     return n.toString();
-  } catch (e) {
-    return "Massive"; 
-  }
+  } catch (e) { return "Massive"; }
 }
 
 module.exports.config = {
   name: "balance",
   aliases: ["bal"],
-  version: "11.0",
+  version: "19.0",
   author: "MOHAMMAD AKASH",
   countDown: 5,
   role: 0,
-  shortDescription: "Exclusive Digital Premium Card",
+  shortDescription: "Evolution Card with Hardcoded Memory",
   category: "economy"
 };
 
@@ -62,113 +56,73 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     const userData = await usersData.get(senderID);
     const balance = userData?.data?.money ?? 0;
     const userName = await usersData.getName(senderID);
+    const tier = getTierData(balance);
     const formatted = formatBalance(balance);
-    const uniqueCardNum = generateUniqueCardNumber(senderID);
 
-    const width = 850;
-    const height = 520;
+    // Check if we should congratulate (Logic: Only if tier > 1 and not already recorded)
+    let bodyText = `Bank Statement for ${userName}:`;
+    if (tier.id > 1) {
+        const alreadyDone = hasBeenNotified(senderID, tier.id);
+        if (!alreadyDone) {
+            bodyText = `🎊 NEW TIER UNLOCKED! 🎊\n━━━━━━━━━━━━━━━━━━\nCongratulations ${userName.toUpperCase()}!\nYou have achieved the rank of ${tier.rank}.\nYour ${tier.name} card is now active.`;
+        }
+    }
+
+    const width = 850, height = 520;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext("2d");
 
-    // ===== Premium Background (Obsidian) =====
+    // BG
     const grad = ctx.createLinearGradient(0, 0, width, height);
-    grad.addColorStop(0, "#0a0a0a");
-    grad.addColorStop(0.5, "#1a1a1a");
-    grad.addColorStop(1, "#000000");
+    grad.addColorStop(0, tier.color[0]); grad.addColorStop(1, tier.color[1]);
     ctx.fillStyle = grad;
-    
-    // Draw Round Rect
-    ctx.beginPath();
-    ctx.roundRect(0, 0, width, height, 40);
-    ctx.fill();
+    ctx.beginPath(); ctx.roundRect(0, 0, width, height, 40); ctx.fill();
 
-    // Subtle Premium Texture
-    ctx.strokeStyle = "rgba(212, 175, 55, 0.05)";
-    ctx.lineWidth = 1;
-    for (let i = 0; i < width; i += 40) {
-      ctx.beginPath();
-      ctx.moveTo(i, 0);
-      ctx.lineTo(i + 200, height);
-      ctx.stroke();
-    }
+    // Headers
+    ctx.font = "bold 38px Arial"; ctx.fillStyle = tier.accent;
+    ctx.fillText(tier.name, 60, 85);
 
-    // ===== Bank Name =====
-    ctx.font = "bold 40px Arial";
-    ctx.fillStyle = "#D4AF37";
-    ctx.fillText("ZENITH DIGITAL BANK", 60, 85);
-
-    // ===== Gold Chip =====
+    // Chip
     const chipGrad = ctx.createLinearGradient(60, 140, 150, 205);
-    chipGrad.addColorStop(0, "#BF953F");
-    chipGrad.addColorStop(0.5, "#FCF6BA");
-    chipGrad.addColorStop(1, "#AA771C");
-    ctx.fillStyle = chipGrad;
-    ctx.beginPath();
-    ctx.roundRect(60, 140, 95, 70, 12);
-    ctx.fill();
+    chipGrad.addColorStop(0, tier.chip[0]); chipGrad.addColorStop(1, tier.chip[1]);
+    ctx.fillStyle = chipGrad; ctx.beginPath(); ctx.roundRect(60, 140, 95, 70, 12); ctx.fill();
 
-    // ===== UNIQUE CARD NUMBER =====
-    ctx.font = "32px monospace";
-    ctx.fillStyle = "#E5E4E2"; 
-    ctx.fillText(uniqueCardNum, 60, 260);
+    // Details
+    const s = senderID.toString();
+    const cardNum = `${s.slice(0,4)} ${s.slice(4,8)} ${s.slice(8,12).padEnd(4,'9')} ${s.slice(-4)}`;
+    ctx.font = "32px monospace"; ctx.fillStyle = tier.text; ctx.fillText(cardNum, 60, 260);
+    ctx.font = "bold 30px Arial"; ctx.fillText(userName.toUpperCase(), 60, 410);
 
-    // ===== Holder Info =====
-    ctx.font = "italic 24px Arial";
-    ctx.fillStyle = "#aaaaaa";
-    ctx.fillText("CARD HOLDER", 60, 360);
-    ctx.font = "bold 30px Arial";
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText(userName.toUpperCase(), 60, 400);
-
-    // ===== Balance Box =====
+    // Balance Box
     const boxX = 430, boxY = 280, boxW = 360, boxH = 160;
-    ctx.fillStyle = "rgba(255, 255, 255, 0.07)";
-    ctx.strokeStyle = "rgba(212, 175, 55, 0.3)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(boxX, boxY, boxW, boxH, 20);
-    ctx.fill();
-    ctx.stroke();
+    ctx.fillStyle = "rgba(150, 150, 150, 0.15)";
+    ctx.beginPath(); ctx.roundRect(boxX, boxY, boxW, boxH, 25); ctx.fill();
+    ctx.strokeStyle = tier.accent; ctx.lineWidth = 2; ctx.stroke();
 
     ctx.textAlign = "center";
-    ctx.font = "bold 18px Arial";
-    ctx.fillStyle = "#D4AF37";
-    ctx.fillText("TOTAL VALUATION", boxX + boxW / 2, boxY + 45);
-
-    let balText = "$" + formatted;
-    let fontSize = balText.length > 12 ? 35 : 55;
-    ctx.font = `bold ${fontSize}px Arial`;
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText(balText, boxX + boxW / 2, boxY + 115);
+    ctx.font = "bold 18px Arial"; ctx.fillStyle = tier.accent;
+    ctx.fillText(tier.rank, boxX + boxW / 2, boxY + 45);
+    ctx.font = `bold ${formatted.length > 12 ? 35 : 55}px Arial`; ctx.fillStyle = tier.text;
+    ctx.fillText("$" + formatted, boxX + boxW / 2, boxY + 115);
     ctx.textAlign = "left";
 
-    // ===== Avatar =====
+    // Avatar
     try {
       const picURL = `https://graph.facebook.com/${senderID}/picture?height=500&width=500&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
       const response = await axios.get(picURL, { responseType: "arraybuffer" });
       const avatar = await loadImage(response.data);
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(width - 110, 100, 65, 0, Math.PI * 2);
-      ctx.strokeStyle = "#D4AF37";
-      ctx.lineWidth = 4;
-      ctx.stroke();
-      ctx.clip();
-      ctx.drawImage(avatar, width - 175, 35, 130, 130);
-      ctx.restore();
-    } catch (e) { console.log("Avatar error"); }
+      ctx.save(); ctx.beginPath(); ctx.arc(width - 110, 100, 70, 0, Math.PI * 2);
+      ctx.strokeStyle = tier.accent; ctx.lineWidth = 5; ctx.stroke();
+      ctx.clip(); ctx.drawImage(avatar, width - 180, 30, 140, 140); ctx.restore();
+    } catch (e) {}
 
-    const cachePath = path.join(__dirname, "cache");
-    if (!fs.existsSync(cachePath)) fs.mkdirSync(cachePath);
-    const filePath = path.join(cachePath, `premium_bal_${senderID}.png`);
-    
+    const filePath = path.join(__dirname, "cache", `bal_${senderID}.png`);
+    if (!fs.existsSync(path.join(__dirname, "cache"))) fs.mkdirSync(path.join(__dirname, "cache"));
     fs.writeFileSync(filePath, canvas.toBuffer("image/png"));
     
-    return api.sendMessage({ attachment: fs.createReadStream(filePath) }, threadID, () => {
+    return api.sendMessage({ body: bodyText, attachment: fs.createReadStream(filePath) }, threadID, () => {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }, messageID);
 
-  } catch (err) {
-    return api.sendMessage("Error: " + err.message, threadID, messageID);
-  }
+  } catch (err) { return api.sendMessage("Error: " + err.message, threadID, messageID); }
 };
