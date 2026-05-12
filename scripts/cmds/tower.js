@@ -1,15 +1,14 @@
 const fmt = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 module.exports = {
   config: {
     name: "tower",
-    aliases: ["tw"],
-    version: "1.0.0",
+    aliases: ["climb"],
+    version: "2.0.0",
     author: "Minh Anh",
     countDown: 5,
     role: 0,
-    category: "economy",
+    category: "gambling",
     guide: {
       en: "{p}tower [amount]"
     }
@@ -18,83 +17,74 @@ module.exports = {
   onStart: async function ({ api, event, args, usersData }) {
     const { threadID, messageID, senderID } = event;
 
-    // 1. INPUT & BALANCE VALIDATION
-    const betInput = args[0]?.toLowerCase();
     const userData = await usersData.get(senderID);
     const rawMoney = (userData.data.money || "0").toString().split('.')[0].split('e')[0];
     const userMoney = BigInt(rawMoney);
 
+    if (!args[0]) return api.sendMessage("⚠️ 𝐄𝐧𝐭𝐞𝐫 𝐚 𝐛𝐞𝐭 𝐚𝐦𝐨𝐮𝐧𝐭 𝐭𝐨 𝐛𝐞𝐠𝐢𝐧 𝐭𝐡𝐞 𝐚𝐬𝐜𝐞𝐧𝐭.", threadID, messageID);
+    
     let betAmount;
-    if (betInput === "all") {
-      betAmount = userMoney;
-    } else {
-      const sanitizedBet = betInput?.replace(/[^0-9]/g, '') || "0";
-      betAmount = sanitizedBet === "" ? 0n : BigInt(sanitizedBet);
-    }
+    if (args[0] === "all") betAmount = userMoney;
+    else betAmount = BigInt(args[0].replace(/,/g, ''));
 
-    if (betAmount <= 0n) return api.sendMessage("🏛️ 𝐓𝐎𝐖𝐄𝐑 𝐏𝐑𝐎𝐓𝐎𝐂𝐎𝐋\n━━━━━━━━━━━━━━━━━━\n💡 𝐔𝐬𝐚𝐠𝐞: {p}tower [amount]", threadID, messageID);
-    if (betAmount > userMoney) return api.sendMessage("❌ 𝐈𝐍𝐒𝐔𝐅𝐅𝐈𝐂𝐈𝐄𝐍𝐓 𝐂𝐑𝐄𝐃𝐈𝐓𝐒.", threadID, messageID);
+    if (betAmount <= 0n) return api.sendMessage("⚠️ 𝐁𝐞𝐭 𝐦𝐮𝐬𝐭 𝐛𝐞 𝐠𝐫𝐞𝐚𝐭𝐞𝐫 𝐭𝐡𝐚𝐧 𝟎.", threadID, messageID);
+    if (betAmount > userMoney) return api.sendMessage("❌ 𝐈𝐧𝐬𝐮𝐟𝐟𝐢𝐜𝐢𝐞𝐧𝐭 𝐒𝐨𝐯𝐞𝐫𝐞𝐢𝐠𝐧 𝐑𝐞𝐬𝐞𝐫𝐯𝐞𝐬.", threadID, messageID);
 
-    // 2. TOWER ENGINE (5 Levels)
-    const levels = [
-      { name: "GROUND", mult: 0n },
-      { name: "LEVEL 1", mult: 2n, chance: 0.80 },
-      { name: "LEVEL 2", mult: 5n, chance: 0.50 },
-      { name: "LEVEL 3", mult: 15n, chance: 0.30 },
-      { name: "LEVEL 4", mult: 50n, chance: 0.15 },
-      { name: "PINNACLE", mult: 150n, chance: 0.05 }
+    // --- THE NERFED LOGIC ---
+    // Multipliers are lower, and the 'Death' chance is significantly higher at each floor.
+    const floors = [
+      { level: 1, mult: 1.2, fail: 0.25 }, // 25% fail
+      { level: 2, mult: 1.5, fail: 0.35 }, // 35% fail
+      { level: 3, mult: 2.0, fail: 0.45 }, // 45% fail
+      { level: 4, mult: 3.0, fail: 0.60 }, // 60% fail
+      { level: 5, mult: 5.0, fail: 0.80 }  // 80% fail (The Wall)
     ];
 
-    let currentLevel = 0;
-    for (let i = 1; i < levels.length; i++) {
-      if (Math.random() < levels[i].chance) {
-        currentLevel = i;
-      } else {
-        break; // Tower collapsed
-      }
-    }
+    let currentFloor = 0;
+    let reachedTop = true;
 
-    const winMult = levels[currentLevel].mult;
-    const isWin = winMult > 0n;
+    for (const floor of floors) {
+      if (Math.random() < floor.fail) {
+        currentFloor = floor.level;
+        reachedTop = false;
+        break;
+      }
+      currentFloor = floor.level;
+    }
 
     let finalBalance;
-    let status = "";
-    let profitChange = "";
+    let statusMsg = "";
+    let winAmount = 0n;
 
-    if (isWin) {
-      const winTotal = betAmount * winMult;
-      finalBalance = userMoney + (winTotal - betAmount);
-      status = currentLevel === 5 ? "💎 𝐏𝐈𝐍𝐍𝐀𝐂𝐋𝐄 𝐑𝐄𝐀𝐂𝐇𝐄𝐃" : "🗼 𝐀𝐒𝐂𝐄𝐍𝐓 𝐒𝐔𝐂𝐂𝐄𝐒𝐒𝐅𝐔𝐋";
-      profitChange = `✨ 𝐘𝐢𝐞𝐥𝐝: ${winMult}𝐱\n💰 𝐏𝐫𝐨𝐟𝐢𝐭: +$${fmt(winTotal - betAmount)}`;
-    } else {
+    if (!reachedTop) {
+      // LOSE: Entire bet is forfeited
       finalBalance = userMoney - betAmount;
-      status = "💥 𝐓𝐎𝐖𝐄𝐑 𝐂𝐎𝐋𝐋𝐀𝐏𝐒𝐄𝐃";
-      profitChange = `💸 𝐋𝐨𝐬𝐬: -$${fmt(betAmount)}`;
+      statusMsg = `📉 𝐅𝐀𝐋𝐋𝐄𝐍: 𝐂𝐨𝐥𝐥𝐚𝐩𝐬𝐞𝐝 𝐨𝐧 𝐅𝐥𝐨𝐨𝐫 ${currentFloor}`;
+    } else {
+      // WIN: Calculate prize based on the top floor multiplier
+      const topMult = floors[floors.length - 1].mult;
+      winAmount = BigInt(Math.floor(Number(betAmount) * topMult));
+      finalBalance = userMoney - betAmount + winAmount;
+      statusMsg = `🏰 𝐂𝐎𝐍𝐐𝐔𝐄𝐑𝐄𝐃: 𝐑𝐞𝐚𝐜𝐡𝐞𝐝 𝐭𝐡𝐞 𝐒𝐮𝐦𝐦𝐢𝐭`;
     }
 
-    // 3. UI CONSTRUCTION
-    const towerVisual = [
-      currentLevel >= 5 ? "💎 [ HIGH ]" : "⬜ [ HIGH ]",
-      currentLevel >= 4 ? "🟦 [ LVL 4 ]" : "⬜ [ LVL 4 ]",
-      currentLevel >= 3 ? "🟩 [ LVL 3 ]" : "⬜ [ LVL 3 ]",
-      currentLevel >= 2 ? "🟨 [ LVL 2 ]" : "⬜ [ LVL 2 ]",
-      currentLevel >= 1 ? "🟧 [ LVL 1 ]" : "⬜ [ LVL 1 ]",
-      "🧱 [ BASE ]"
-    ].join("\n      ");
+    await usersData.set(senderID, {
+      money: finalBalance.toString(),
+      data: { ...userData.data, money: finalBalance.toString() }
+    });
 
+    // UI CONSTRUCTION (CATACLYSM STYLE)
     let msg = `🏛️ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐓𝐎𝐖𝐄𝐑\n`;
     msg += `━━━━━━━━━━━━━━━━━━\n`;
-    msg += `      ${towerVisual}\n`;
+    msg += `📥 𝐖𝐚𝐠𝐞𝐫: $${fmt(betAmount)}\n`;
+    msg += `🪜 𝐀𝐬𝐜𝐞𝐧𝐭: Floor ${reachedTop ? floors.length : currentFloor - 1} / ${floors.length}\n`;
     msg += `━━━━━━━━━━━━━━━━━━\n`;
-    msg += `${status}\n`;
-    msg += `${profitChange}\n`;
+    msg += `${statusMsg}\n`;
+    msg += `💰 𝐑𝐞𝐬𝐮𝐥𝐭: ${reachedTop ? "+" : "-"}$${fmt(reachedTop ? winAmount - betAmount : betAmount)}\n`;
     msg += `━━━━━━━━━━━━━━━━━━\n`;
-    msg += `🏦 𝐁𝐀𝐋𝐀𝐍𝐂𝐄: $${fmt(finalBalance)}\n`;
+    msg += `🏦 𝐁𝐚𝐥𝐚𝐧𝐜𝐞: $${fmt(finalBalance)}\n`;
     msg += `━━━━━━━━━━━━━━━━━━\n`;
     msg += `   𝐄𝐗𝐄𝐂𝐔𝐓𝐄𝐃 𝐁𝐘 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐄𝐋𝐈𝐓𝐄`;
-
-    // 4. DATABASE SYNC
-    await usersData.set(senderID, { data: { ...userData.data, money: finalBalance.toString() } });
 
     return api.sendMessage(msg, threadID, messageID);
   }
