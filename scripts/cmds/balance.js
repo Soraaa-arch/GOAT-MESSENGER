@@ -7,21 +7,32 @@ if (!global.milestoneRegistry) global.milestoneRegistry = {};
 
 function getTierData(balance) {
   const n = BigInt(Math.floor(balance));
+  
+  // 10^100: GOOGOL
   if (n >= 10n**100n) return { 
-    id: 5, name: "GOOGOL OVERLORD", rank: "COSMIC ENTITY", 
+    id: 6, name: "GOOGOL OVERLORD", rank: "COSMIC ENTITY", 
     color: ["#000000", "#1a0033", "#4b0082"], accent: "#cc00ff", 
     chip: ["#ff00ff", "#ffffff"], text: "#ffffff", glass: "rgba(255, 255, 255, 0.1)" 
   };
+  // 10^30: NEW TIER - CELESTIAL DIAMOND
+  if (n >= 10n**30n) return { 
+    id: 5, name: "CELESTIAL DIAMOND", rank: "GALAXY ARCHITECT", 
+    color: ["#0f2027", "#203a43", "#2c5364"], accent: "#b9f2ff", 
+    chip: ["#b9f2ff", "#ffffff"], text: "#ffffff", glass: "rgba(185, 242, 255, 0.2)", special: "hologram" 
+  };
+  // 10^15: AETHER PLATINUM
   if (n >= 10n**15n) return { 
     id: 4, name: "AETHER PLATINUM", rank: "AETHER ARCHON", 
     color: ["#cfd9df", "#ffffff", "#e2ebf0"], accent: "#00d4ff", 
     chip: ["#00d4ff", "#ffffff"], text: "#1a1a1a", glass: "rgba(255, 255, 255, 0.5)", special: "hologram" 
   };
+  // 10^12: ZENITH GOLD
   if (n >= 10n**12n) return { 
     id: 3, name: "ZENITH GOLD", rank: "TRILLIONAIRE ELITE", 
     color: ["#0f0f0f", "#2c2c2c"], accent: "#D4AF37", 
     chip: ["#BF953F", "#FCF6BA"], text: "#ffffff", glass: "rgba(255, 215, 0, 0.1)" 
   };
+  // 10^9: TITAN IRON
   if (n >= 10n**9n) return { 
     id: 2, name: "TITAN IRON", rank: "BILLIONAIRE TYCOON", 
     color: ["#232526", "#414345"], accent: "#e5e4e2", 
@@ -36,9 +47,32 @@ function getTierData(balance) {
 
 function formatBalance(num) {
   try {
-    const n = BigInt(Math.floor(num));
-    const suffixes = [{v: 10n**100n, s: "Googol"}, {v: 10n**15n, s: "Q"}, {v: 10n**12n, s: "T"}, {v: 10n**9n, s: "B"}, {v: 10n**6n, s: "M"}, {v: 10n**3n, s: "K"}];
-    for (const {v, s} of suffixes) { if (n >= v) return (n / (v / 10n)).toString().replace(/(\d)$/, ".$1") + s; }
+    const n = BigInt(num.toString().split('.')[0] || 0);
+    if (n === 0n) return "0";
+
+    const suffixes = [
+      { v: 10n**100n, s: "Googol" },
+      { v: 10n**33n,  s: "Dec" },   // Decillion
+      { v: 10n**30n,  s: "Non" },   // Nonillion
+      { v: 10n**27n,  s: "Oct" },   // Octillion
+      { v: 10n**24n,  s: "Sep" },   // Septillion
+      { v: 10n**21n,  s: "Sex" },   // Sextillion
+      { v: 10n**18n,  s: "Qui" },   // Quintillion
+      { v: 10n**15n,  s: "Q" },     // Quadrillion
+      { v: 10n**12n,  s: "T" },     // Trillion
+      { v: 10n**9n,   s: "B" },     // Billion
+      { v: 10n**6n,   s: "M" },     // Million
+      { v: 10n**3n,   s: "K" }      // Thousand
+    ];
+
+    for (const { v, s } of suffixes) {
+      if (n >= v) {
+        const calculation = (n / (v / 10n)).toString();
+        const whole = calculation.slice(0, -1) || "0";
+        const decimal = calculation.slice(-1);
+        return `${whole}.${decimal}${s}`;
+      }
+    }
     return n.toString();
   } catch (e) { return "Massive"; }
 }
@@ -46,11 +80,11 @@ function formatBalance(num) {
 module.exports.config = {
   name: "balance",
   aliases: ["bal"],
-  version: "30.0",
-  author: "MOHAMMAD AKASH",
+  version: "31.0",
+  author: "MOHAMMAD AKASH x GEMINI",
   countDown: 5,
   role: 0,
-  shortDescription: "Minimalist High-End Evolution Cards",
+  shortDescription: "Evolutionary Wealth Card with Googol support",
   category: "economy"
 };
 
@@ -61,40 +95,40 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     const userData = await usersData.get(senderID) || { data: {} };
     if (!userData.data) userData.data = {};
     
-    const balance = userData.data.money ?? 0;
+    // Safety check for BigInt conversion
+    const balance = userData.data.money || "0";
     const userName = await usersData.getName(senderID);
     const tier = getTierData(balance);
     const formatted = formatBalance(balance);
 
-    // --- MINIMALIST LUXURY HEADER ---
-    let bodyText = "✦ ───────────── ✦\n   🏦 BANK STATEMENT\n✦ ───────────── ✦\nAccount Holder:" + userName;
+    let bodyText = "✦ ───────────── ✦\n   🏦 BANK STATEMENT\n✦ ───────────── ✦\nAccount Holder: " + userName;
     
     const lastAch = Number(userData.data.lastAchievement || 0);
     const currentTierID = Number(tier.id);
     const sessionKey = senderID + "_" + currentTierID;
 
-    // --- HIGH END CONGRATS ---
     if (currentTierID > 1 && currentTierID > lastAch && !global.milestoneRegistry[sessionKey]) {
         bodyText = "✦ EVOLUTION ACHIEVED ✦\n━━━━━━━━━━━━━━━━━━\nCongratulations " + userName.toUpperCase() + "\n\nRANK ✧ " + tier.rank + "\nTIER ✧ " + tier.name + "\n\nWelcome to the elite tier.\n━━━━━━━━━━━━━━━━━━";
-        
         userData.data.lastAchievement = currentTierID;
         global.milestoneRegistry[sessionKey] = true; 
-        await usersData.set(senderID, userData.data);
+        await usersData.set(senderID, { data: userData.data });
     }
 
     const width = 850, height = 520;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext("2d");
 
+    // Background Gradient
     const grad = ctx.createLinearGradient(0, 0, width, height);
     tier.color.forEach((c, i) => grad.addColorStop(i / (tier.color.length - 1), c));
     ctx.fillStyle = grad;
     ctx.beginPath(); ctx.roundRect(0, 0, width, height, 45); ctx.fill();
 
+    // Design Accents
     if (tier.special === "hologram") {
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
         ctx.lineWidth = 1;
-        for (let i = -width; i < width; i += 40) {
+        for (let i = -width; i < width; i += 30) {
             ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + height, height); ctx.stroke();
         }
     }
@@ -102,16 +136,19 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     ctx.font = "bold 40px Arial"; ctx.fillStyle = tier.accent;
     ctx.fillText(tier.name, 60, 85);
 
+    // Chip Design
     const chipGrad = ctx.createLinearGradient(60, 140, 150, 205);
     chipGrad.addColorStop(0, tier.chip[0]); chipGrad.addColorStop(1, tier.chip[1]);
     ctx.fillStyle = chipGrad; ctx.beginPath(); ctx.roundRect(60, 140, 95, 70, 15); ctx.fill();
 
+    // Card Details
     const s = senderID.toString();
-    const cardNum = s.slice(0,4) + " " + s.slice(4,8) + " " + s.slice(8,12).padEnd(4,"9") + " " + s.slice(-4);
+    const cardNum = s.slice(0,4) + " " + s.slice(4,8) + " " + s.slice(8,12).padEnd(4,"*") + " " + s.slice(-4);
     ctx.font = "30px monospace"; ctx.fillStyle = tier.text; ctx.fillText(cardNum, 60, 270);
     ctx.font = "32px Arial"; ctx.fillText(userName.toUpperCase(), 60, 420);
 
-    const boxX = 430, boxY = 280, boxW = 360, boxH = 170;
+    // Balance Glass Box
+    const boxX = 410, boxY = 280, boxW = 400, boxH = 170;
     ctx.fillStyle = tier.glass;
     ctx.beginPath(); ctx.roundRect(boxX, boxY, boxW, boxH, 30); ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,0.2)"; ctx.lineWidth = 1; ctx.stroke();
@@ -120,15 +157,14 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     ctx.font = "18px Arial"; ctx.fillStyle = tier.accent;
     ctx.fillText(tier.rank, boxX + boxW / 2, boxY + 50);
     
-    const fontSize = formatted.length > 12 ? 40 : 60;
+    const fontSize = formatted.length > 14 ? 35 : 55;
     ctx.font = "bold " + fontSize + "px Arial"; 
     ctx.fillStyle = tier.text;
     ctx.fillText("$" + formatted, boxX + boxW / 2, boxY + 120);
-    ctx.textAlign = "left";
 
+    // Avatar Logic
     try {
-      const h = "68747470733a2f2f67726170682e66616365626f6f6b2e636f6d2f";
-      const u = Buffer.from(h, "hex").toString() + senderID + "/picture?height=500&width=500&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662";
+      const u = `https://graph.facebook.com/${senderID}/picture?height=500&width=500&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
       const response = await axios.get(u, { responseType: "arraybuffer" });
       const avatar = await loadImage(response.data);
       ctx.save(); 
@@ -146,5 +182,5 @@ module.exports.onStart = async function ({ api, event, usersData }) {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }, messageID);
 
-  } catch (err) { return api.sendMessage("Error " + err.message, threadID, messageID); }
+  } catch (err) { return api.sendMessage("System Fault: " + err.message, threadID, messageID); }
 };
