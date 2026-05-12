@@ -1,79 +1,108 @@
-if (!global.client.busyList)
-	global.client.busyList = {};
-
 module.exports = {
 	config: {
 		name: "busy",
-		version: "1.6",
-		author: "NTKhang",
+		version: "2.5.0",
+		author: "Sovereign Edit",
 		countDown: 5,
 		role: 0,
-		description: {
-			vi: "bật chế độ không làm phiền, khi bạn được tag bot sẽ thông báo",
-			en: "turn on do not disturb mode, when you are tagged bot will notify"
-		},
-		category: "box chat",
+		category: "system",
 		guide: {
-			vi: "   {pn} [để trống | <lý do>]: bật chế độ không làm phiền"
-				+ "\n   {pn} off: tắt chế độ không làm phiền",
-			en: "   {pn} [empty | <reason>]: turn on do not disturb mode"
-				+ "\n   {pn} off: turn off do not disturb mode"
+			en: "{pn} [reason] | {pn} off"
 		}
 	},
 
-	langs: {
-		vi: {
-			turnedOff: "✅ | Đã tắt chế độ không làm phiền",
-			turnedOn: "✅ | Đã bật chế độ không làm phiền",
-			turnedOnWithReason: "✅ | Đã bật chế độ không làm phiền với lý do: %1",
-			turnedOnWithoutReason: "✅ | Đã bật chế độ không làm phiền",
-			alreadyOn: "Hiện tại người dùng %1 đang bận",
-			alreadyOnWithReason: "Hiện tại người dùng %1 đang bận với lý do: %2"
-		},
-		en: {
-			turnedOff: "✅ | Do not disturb mode has been turned off",
-			turnedOn: "✅ | Do not disturb mode has been turned on",
-			turnedOnWithReason: "✅ | Do not disturb mode has been turned on with reason: %1",
-			turnedOnWithoutReason: "✅ | Do not disturb mode has been turned on",
-			alreadyOn: "User %1 is currently busy",
-			alreadyOnWithReason: "User %1 is currently busy with reason: %2"
-		}
-	},
-
-	onStart: async function ({ args, message, event, getLang, usersData }) {
+	onStart: async function ({ args, event, usersData, message }) {
 		const { senderID } = event;
 
 		if (args[0] == "off") {
-			const { data } = await usersData.get(senderID);
-			delete data.busy;
-			await usersData.set(senderID, data, "data");
-			return message.reply(getLang("turnedOff"));
+			const userData = await usersData.get(senderID);
+			delete userData.data.busy;
+			await usersData.set(senderID, userData.data, "data");
+			
+			let msg = `🏛️ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐒𝐘𝐒𝐓𝐄𝐌 𝐔𝐏𝐃𝐀𝐓𝐄\n`;
+			msg += `━━━━━━━━━━━━━━━━━━\n`;
+			msg += `✅ 𝐃𝐢𝐬𝐭𝐮𝐫𝐛𝐚𝐧𝐜𝐞 𝐟𝐢𝐥𝐭𝐞𝐫𝐬 𝐝𝐞𝐚𝐜𝐭𝐢𝐯𝐚𝐭𝐞𝐝.\n`;
+			msg += `━━━━━━━━━━━━━━━━━━\n`;
+			return message.reply(msg);
 		}
 
-		const reason = args.join(" ") || "";
-		await usersData.set(senderID, reason, "data.busy");
-		return message.reply(
-			reason ?
-				getLang("turnedOnWithReason", reason) :
-				getLang("turnedOnWithoutReason")
-		);
+		const reason = args.join(" ") || "No specific reason provided.";
+		const userData = await usersData.get(senderID);
+		
+		// Initialize busy object with a log array for mentions
+		await usersData.set(senderID, { 
+			status: true, 
+			reason: reason, 
+			logs: [] 
+		}, "data.busy");
+
+		let msg = `🏛️ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐒𝐘𝐒𝐓𝐄𝐌 𝐁𝐔𝐒𝐘\n`;
+		msg += `━━━━━━━━━━━━━━━━━━\n`;
+		msg += `👤 𝐒𝐭𝐚𝐭𝐮𝐬: 𝐎𝐅𝐅𝐋𝐈𝐍𝐄 / 𝐁𝐔𝐒𝐘\n`;
+		msg += `📝 𝐑𝐞𝐚𝐬𝐨𝐧: ${reason}\n`;
+		msg += `━━━━━━━━━━━━━━━━━━\n`;
+		msg += `   𝐒𝐘𝐒𝐓𝐄𝐌 𝐎𝐕𝐄𝐑𝐑𝐈𝐃𝐄 𝐀𝐂𝐓𝐈𝐕𝐄`;
+		
+		return message.reply(msg);
 	},
 
-	onChat: async ({ event, message, getLang }) => {
-		const { mentions } = event;
+	onChat: async ({ event, message, usersData, api }) => {
+		const { senderID, mentions, body, type } = event;
 
-		if (!mentions || Object.keys(mentions).length == 0)
-			return;
-		const arrayMentions = Object.keys(mentions);
+		// 1. LOGGING MENTIONS (When someone tags you)
+		if (mentions && Object.keys(mentions).length > 0) {
+			for (const userID of Object.keys(mentions)) {
+				const userData = await usersData.get(userID);
+				const busyData = userData.data.busy;
 
-		for (const userID of arrayMentions) {
-			const reasonBusy = global.db.allUserData.find(item => item.userID == userID)?.data.busy || false;
-			if (reasonBusy !== false) {
-				return message.reply(
-					reasonBusy ?
-						getLang("alreadyOnWithReason", mentions[userID].replace("@", ""), reasonBusy) :
-						getLang("alreadyOn", mentions[userID].replace("@", "")));
+				if (busyData && busyData.status) {
+					// Add mention to the user's logs
+					const logEntry = {
+						name: (await usersData.get(senderID)).name,
+						content: body || "Sent an attachment/sticker",
+						time: new Date().toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })
+					};
+					
+					busyData.logs.push(logEntry);
+					await usersData.set(userID, busyData, "data.busy");
+
+					// Auto-reply to the person who tagged you
+					let reply = `🏛️ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐀𝐔𝐓𝐎-𝐑𝐄𝐏𝐋𝐘\n`;
+					reply += `━━━━━━━━━━━━━━━━━━\n`;
+					reply += `👤 ${userData.name} is currently 𝐁𝐔𝐒𝐘.\n`;
+					reply += `📝 𝐑𝐞𝐚𝐬𝐨𝐧: ${busyData.reason}\n`;
+					reply += `━━━━━━━━━━━━━━━━━━\n`;
+					reply += `📩 𝐘𝐨𝐮𝐫 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐡𝐚𝐬 𝐛𝐞𝐞𝐧 𝐥𝐨𝐠𝐠𝐞𝐝.`;
+					message.reply(reply);
+				}
 			}
+		}
+
+		// 2. RETURN REPORT (When YOU speak again)
+		const selfData = await usersData.get(senderID);
+		if (selfData.data.busy && selfData.data.busy.status) {
+			const logs = selfData.data.busy.logs;
+			
+			let report = `🏛️ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐒𝐘𝐒𝐓𝐄𝐌 𝐑𝐄𝐓𝐔𝐑𝐍\n`;
+			report += `━━━━━━━━━━━━━━━━━━\n`;
+			report += `Welcome back. Summary of missed activity:\n\n`;
+
+			if (logs.length > 0) {
+				logs.forEach((m, i) => {
+					report += `${i + 1}. 👤 ${m.name}\n💬 "${m.content}"\n⏰ ${m.time}\n\n`;
+				});
+			} else {
+				report += `No mentions were recorded while you were away.\n`;
+			}
+
+			report += `━━━━━━━━━━━━━━━━━━\n`;
+			report += `📉 𝐒𝐭𝐚𝐭𝐮𝐬: 𝐎𝐍𝐋𝐈𝐍𝐄 / 𝐀𝐂𝐓𝐈𝐕𝐄`;
+
+			// Wipe busy data upon return
+			delete selfData.data.busy;
+			await usersData.set(senderID, selfData.data, "data");
+
+			return message.reply(report);
 		}
 	}
 };
