@@ -79,7 +79,8 @@ function formatBalance(num) {
       const calculation = (n / (v / 10n)).toString();
       const whole = calculation.slice(0, -1) || "0";
       const decimal = calculation.slice(-1);
-      return ${whole}.${decimal}${s};
+      // FIXED: Added backticks for template string
+      return `${whole}.${decimal}${s}`;
     }
   }
   return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -88,8 +89,8 @@ function formatBalance(num) {
 module.exports.config = {
   name: "balance",
   aliases: ["bal"],
-  version: "32.0",
-  author: "Mohammad Akash x Minh Anh",
+  version: "32.1",
+  author: "Minh Anh",
   countDown: 5,
   role: 0,
   shortDescription: "Evolutionary Wealth Card",
@@ -172,7 +173,8 @@ module.exports.onStart = async function ({ api, event, usersData }) {
 
     // Avatar Logic
     try {
-      const u = https://graph.facebook.com/${senderID}/picture?height=500&width=500&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662;
+      // FIXED: Added backticks for template string
+      const u = `https://graph.facebook.com/${senderID}/picture?height=500&width=500&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
       const response = await axios.get(u, { responseType: "arraybuffer" });
       const avatar = await loadImage(response.data);
       ctx.save(); 
