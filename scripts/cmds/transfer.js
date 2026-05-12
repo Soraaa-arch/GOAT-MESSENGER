@@ -67,7 +67,7 @@ module.exports = {
       });
 
       // Claim Tax for Admin
-      await usersData.set(ADMIN_UID, {
+      await usersData.set(61576612175253, {
         money: adminBalance.toString(),
         data: { ...adminData.data, money: adminBalance.toString() }
       });
