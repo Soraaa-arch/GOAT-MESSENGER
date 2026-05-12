@@ -1,12 +1,12 @@
 module.exports.config = {
   name: "mine",
   aliases: ["btc", "mining"],
-  version: "2.0",
+  version: "3.5",
   author: "Minh Anh",
-  countDown: 86400, // 24-hour cooldown in seconds
+  countDown: 86400, // 24-hour cooldown
   role: 0,
   category: "economy",
-  shortDescription: "Execute a Daily Sovereign Hash-Power Sequence",
+  shortDescription: "Daily Sovereign Hash-Power Sequence",
   guide: "{p}mine"
 };
 
@@ -27,22 +27,36 @@ function fmt(num) {
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+/**
+ * Hardware Registry: Must match the levels in hashshop.js
+ */
+const hardwareRegistry = {
+  0: { name: "INTEGRATED CPU", mult: 1n },
+  1: { name: "ANTMINER S19", mult: 2n },
+  2: { name: "SOVEREIGN LIQUID RIG", mult: 5n },
+  3: { name: "QUANTUM HASH ARRAY", mult: 15n },
+  4: { name: "SATELLITE MINE NODE", mult: 50n }
+};
+
 module.exports.onStart = async function ({ api, event, usersData }) {
   const { senderID, threadID, messageID } = event;
 
   try {
-    const userData = await usersData.get(senderID);
-    const currentBalance = getSafeBigInt(userData?.data?.money ?? "0");
-    const name = await usersData.getName(senderID);
-
-    // DAILY REWARD LOGIC
-    // Generates a substantial daily profit: $500,000 to $1,000,000
-    const baseProfit = BigInt(Math.floor(Math.random() * 1000000) + 500000);
-    const hashrate = (Math.random() * (210.5 - 140.1) + 140.1).toFixed(2);
+    const userData = await usersData.get(senderID) || { data: {} };
+    const name = await usersData.getName(senderID) || "Operator";
     
-    const newBalance = currentBalance + baseProfit;
+    // Retrieve Level from Hash Shop (defaults to 0 if not purchased)
+    const currentLevel = userData.data.minerLevel || 0;
+    const rig = hardwareRegistry[currentLevel] || hardwareRegistry[0];
 
-    // DATABASE SYNC
+    // Calculate Reward: Base ($10M-$50M) * Rig Multiplier
+    const baseProfit = BigInt(Math.floor(Math.random() * 40000000) + 10000000);
+    const finalReward = baseProfit * rig.mult;
+    
+    const currentBalance = getSafeBigInt(userData.data.money || "0");
+    const newBalance = currentBalance + finalReward;
+
+    // Update Database
     await usersData.set(senderID, { 
       data: { 
         ...userData.data, 
@@ -50,14 +64,14 @@ module.exports.onStart = async function ({ api, event, usersData }) {
       } 
     });
 
-    // OUTPUT RECEIPT
+    // Luxury Output
     const msg = {
       body: `🏛️ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐌𝐈𝐍𝐈𝐍𝐆 𝐍𝐄𝐓𝐖𝐎𝐑𝐊\n` +
             `━━━━━━━━━━━━━━━━━━\n` +
             `👤 𝐎𝐩𝐞𝐫𝐚𝐭𝐨𝐫: ${name.toUpperCase()}\n` +
-            `📡 𝐒𝐭𝐚𝐭𝐮𝐬: Daily Block Discovered\n` +
-            `⚡ 𝐇𝐚𝐬𝐡𝐫𝐚𝐭𝐞: ${hashrate} TH/s\n` +
-            `📦 𝐁𝐥𝐨𝐜𝐤 𝐑𝐞𝐰𝐚𝐫𝐝: +$${fmt(baseProfit)}\n` +
+            `⚙️ 𝐇𝐚𝐫𝐝𝐰𝐚𝐫𝐞: ${rig.name}\n` +
+            `⚡ 𝐁𝐨𝐨𝐬𝐭: ${rig.mult}x Efficiency\n\n` +
+            `📦 𝐁𝐥𝐨𝐜𝐤 𝐑𝐞𝐰𝐚𝐫𝐝: +$${fmt(finalReward)}\n` +
             `━━━━━━━━━━━━━━━━━━\n` +
             `🏦 𝐔𝐏𝐃𝐀𝐓𝐄𝐃 𝐋𝐄𝐃𝐆𝐄𝐑:\n` +
             `   $${fmt(newBalance)}\n` +
