@@ -5,11 +5,11 @@ const { createCanvas } = require("canvas");
 module.exports.config = {
   name: "leaderboard",
   aliases: ["lb", "top"],
-  version: "20.0",
-  author: "MOHAMMAD AKASH / Modified by Minh Anh",
+  version: "22.0",
+  author: "Minh Anh",
   countDown: 10,
   role: 0,
-  shortDescription: "Ultra-Premium Sovereign Asset Registry",
+  shortDescription: "Sovereign Registry with Platinum Accents",
   category: "economy"
 };
 
@@ -51,20 +51,13 @@ module.exports.onStart = async function ({ api, event, usersData }) {
       .sort((a, b) => (b.money > a.money ? 1 : -1))
       .slice(0, 10);
 
-    const width = 1100, rowH = 125, headerH = 320;
-    const height = headerH + (rowH * sorted.length) + 120;
+    const width = 1100, rowH = 120, headerH = 340;
+    const height = headerH + (rowH * sorted.length) + 100;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext("2d");
 
-    // 1. BACKGROUND DESIGN
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(0, 0, width, height);
-    
-    // Vignette Effect
-    const radial = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, width*0.8);
-    radial.addColorStop(0, "#0c0c12");
-    radial.addColorStop(1, "#000000");
-    ctx.fillStyle = radial;
+    // 1. BASE BACKGROUND
+    ctx.fillStyle = "#050505";
     ctx.fillRect(0, 0, width, height);
 
     // 2. GRADIENTS
@@ -75,85 +68,94 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     goldGrad.addColorStop(0.75, "#FBF5B7");
     goldGrad.addColorStop(1, "#AA771C");
 
-    // 3. HEADER
+    // NEW: Platinum/Chrome Gradient for ELITE
+    const eliteGrad = ctx.createLinearGradient(0, 150, 0, 260);
+    eliteGrad.addColorStop(0, "#E5E4E2"); // Platinum
+    eliteGrad.addColorStop(0.4, "#FFFFFF"); // Pure White Shine
+    eliteGrad.addColorStop(0.5, "#B4B4B4"); // Chrome Shadow
+    eliteGrad.addColorStop(1, "#8E8E8E"); // Deep Silver
+
+    // 3. AMBIENT GOLD BACKGROUND SHEEN
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = goldGrad;
+    ctx.fillRect(0, 0, width, height);
+    ctx.globalAlpha = 1.0;
+
+    // 4. GOLDEN FRAME
+    ctx.strokeStyle = goldGrad;
+    ctx.lineWidth = 12;
+    ctx.strokeRect(20, 20, width - 40, height - 40);
+
+    // 5. HEADER
     ctx.textAlign = "center";
     ctx.fillStyle = goldGrad;
-    ctx.font = "bold 24px serif";
-    ctx.letterSpacing = "12px";
-    ctx.fillText("ESTABLISHED MMXXIV", width/2, 65);
+    ctx.font = "bold 20px serif";
+    ctx.letterSpacing = "15px";
+    ctx.fillText("ESTABLISHED MMXXIV", width/2, 85);
 
-    ctx.font = "italic 38px Georgia";
+    ctx.font = "italic 42px Georgia";
     ctx.letterSpacing = "2px";
-    ctx.fillText("The Sovereign Asset Registry", width/2, 115);
+    ctx.fillText("The Sovereign Asset Registry", width/2, 140);
 
-    ctx.font = "900 115px Helvetica";
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText("ELITE", width/2, 215);
+    // Applying the new Platinum Elite color
+    ctx.font = "900 120px Helvetica";
+    ctx.fillStyle = eliteGrad;
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = "rgba(255, 255, 255, 0.3)";
+    ctx.fillText("ELITE", width/2, 245);
+    ctx.shadowBlur = 0;
     
-    ctx.font = "300 42px Helvetica";
+    ctx.font = "300 45px Helvetica";
     ctx.fillStyle = goldGrad;
-    ctx.letterSpacing = "18px";
-    ctx.fillText("LEADERBOARD", width/2, 275);
+    ctx.letterSpacing = "20px";
+    ctx.fillText("LEADERBOARD", width/2, 305);
 
-    // 4. ROWS
+    // 6. DATA ROWS
     for (let i = 0; i < sorted.length; i++) {
       const u = sorted[i];
       const y = headerH + i * rowH;
       const isTop3 = i < 3;
 
-      // Row Highlight
-      ctx.fillStyle = isTop3 ? "rgba(191, 149, 63, 0.12)" : "rgba(255, 255, 255, 0.04)";
+      ctx.fillStyle = isTop3 ? "rgba(191, 149, 63, 0.15)" : "rgba(255, 255, 255, 0.05)";
       ctx.beginPath();
-      ctx.roundRect(80, y + 15, width - 160, rowH - 30, 2);
+      ctx.roundRect(85, y + 10, width - 170, rowH - 20, 2);
       ctx.fill();
-      if(isTop3) { ctx.strokeStyle = goldGrad; ctx.lineWidth = 1.5; ctx.stroke(); }
-
-      // Rank Medal
-      ctx.textAlign = "center";
-      ctx.font = "bold 32px serif";
-      ctx.fillStyle = isTop3 ? goldGrad : "rgba(255,255,255,0.4)";
-      ctx.fillText((i + 1).toString().padStart(2, '0'), 140, y + rowH/2 + 10);
-
-      // Monogram Medallion
-      const ax = 210, ay = y + rowH/2 - 45, sz = 90;
       
-      if(isTop3) {
-        ctx.shadowBlur = 25;
-        ctx.shadowColor = "rgba(191, 149, 63, 0.4)";
-      }
+      ctx.textAlign = "center";
+      ctx.font = "bold 35px serif";
+      ctx.fillStyle = isTop3 ? goldGrad : "rgba(255,255,255,0.4)";
+      ctx.fillText((i + 1).toString(), 145, y + rowH/2 + 12);
 
-      ctx.fillStyle = isTop3 ? goldGrad : "#151515";
+      const ax = 215, ay = y + rowH/2 - 45, sz = 90;
+      ctx.fillStyle = isTop3 ? goldGrad : "#1a1a1a";
       ctx.beginPath(); ctx.arc(ax + sz/2, ay + sz/2, sz/2, 0, Math.PI * 2); ctx.fill();
-      ctx.shadowBlur = 0;
-
+      
       ctx.fillStyle = isTop3 ? "#000" : goldGrad;
       ctx.font = "900 48px Georgia";
       const initial = u.name.trim().charAt(0).toUpperCase();
       ctx.fillText(initial, ax + sz/2, ay + sz/2 + 16);
 
-      // Identity
       ctx.textAlign = "left";
-      ctx.font = "bold 30px Arial";
+      ctx.font = "bold 32px Arial";
       ctx.fillStyle = "#ffffff";
       let dName = u.name.toUpperCase();
       if (dName.length > 22) dName = dName.substring(0, 20) + "..";
-      ctx.fillText(dName, 340, y + rowH / 2 + 10);
+      ctx.fillText(dName, 350, y + rowH / 2 + 12);
 
-      // Wealth
       ctx.textAlign = "right";
-      ctx.font = "900 38px Helvetica";
+      ctx.font = "900 42px Helvetica";
       ctx.fillStyle = isTop3 ? goldGrad : "#ffffff";
-      ctx.fillText("$" + formatBalance(u.money), width - 120, y + rowH / 2 + 10);
+      ctx.fillText("$" + formatBalance(u.money), width - 130, y + rowH / 2 + 12);
     }
 
-    // 5. FOOTER
+    // 7. FOOTER
     ctx.textAlign = "center";
     ctx.font = "14px Courier New";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+    ctx.fillStyle = "rgba(212, 175, 55, 0.6)";
     ctx.letterSpacing = "10px";
-    ctx.fillText("• MINH ANH PRIVATE ASSET MANAGEMENT •", width/2, height - 50);
+    ctx.fillText("• MINH ANH PRIVATE ASSET MANAGEMENT •", width/2, height - 60);
 
-    const finalPath = path.join(cacheDir, `lb_sovereign_${Date.now()}.png`);
+    const finalPath = path.join(cacheDir, `lb_platinum_elite_${Date.now()}.png`);
     await fs.writeFile(finalPath, canvas.toBuffer("image/png"));
 
     return api.sendMessage({ attachment: fs.createReadStream(finalPath) }, threadID, () => {
@@ -161,6 +163,6 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     }, messageID);
 
   } catch (err) {
-    return api.sendMessage("System Fault | " + err.message, threadID, messageID);
+    return api.sendMessage("Elite Color Update Failed | " + err.message, threadID, messageID);
   }
 };
