@@ -4,7 +4,7 @@ module.exports = {
   config: {
     name: "fish",
     aliases: ["fishing", "catch"],
-    version: "1.4.0",
+    version: "2.0.0",
     author: "Minh Anh",
     countDown: 5,
     role: 0,
@@ -25,10 +25,10 @@ module.exports = {
     let rodLevel = parseInt(userData.data.rodLevel);
 
     const rods = [
-      { name: "🎋 Bamboo Stick", price: 0n, breakChance: 0.25, maxMult: 5n },
-      { name: "🎣 Carbon Rod", price: 500000n, breakChance: 0.15, maxMult: 15n },
-      { name: "⛓️ Titanium Rod", price: 5000000n, breakChance: 0.08, maxMult: 50n },
-      { name: "🔱 Sovereign Harpoon", price: 50000000n, breakChance: 0.02, maxMult: 200n }
+      { name: "🎋 Bamboo Stick", price: 0n, breakChance: 0.15, maxMult: 5n },
+      { name: "🎣 Carbon Rod", price: 500000n, breakChance: 0.10, maxMult: 15n },
+      { name: "⛓️ Titanium Rod", price: 5000000n, breakChance: 0.05, maxMult: 50n },
+      { name: "🔱 Sovereign Harpoon", price: 50000000n, breakChance: 0.01, maxMult: 200n }
     ];
 
     const currentRod = rods[rodLevel - 1];
@@ -43,21 +43,21 @@ module.exports = {
       return api.sendMessage(`🛠️ 𝐑𝐎𝐃 𝐔𝐏𝐆𝐑𝐀𝐃𝐄𝐃\n━━━━━━━━━━━━━━━━━━\nNew Rod: ${nextRod.name}\nCost: -$${fmt(nextRod.price)}\n━━━━━━━━━━━━━━━━━━\n🏦 𝐁𝐚𝐥𝐚𝐧𝐜𝐞: $${fmt(finalBalance)}`, threadID, messageID);
     }
 
-    // 1. ROD BREAK CHECK
+    // Standard Rod Break Check
     if (Math.random() < currentRod.breakChance) {
       await usersData.set(senderID, { data: { ...userData.data, rodLevel: 1 } });
       return api.sendMessage(`💥 𝐒𝐍𝐀𝐏!\n━━━━━━━━━━━━━━━━━━\nYour ${currentRod.name} has shattered.\n⚠️ 𝐑𝐨𝐝 𝐫𝐞𝐬𝐞𝐭 𝐭𝐨 𝐁𝐚𝐦𝐛𝐨𝐨 𝐒𝐭𝐢𝐜𝐤.`, threadID, messageID);
     }
 
-    // 2. EXTREME HAZARD POOL (70% Hazard Rate)
+    // NORMALIZED FISH POOL (Balanced Hazards)
     const fishPool = [
-      { name: "💣 𝐁𝐎𝐌𝐁 𝐅𝐈𝐒𝐇", chance: 0.35, mult: 0n, type: "bomb" },    // 35% Chance
-      { name: "🤮 𝐏𝐎𝐈𝐒𝐎𝐍 𝐅𝐈𝐒𝐇", chance: 0.35, mult: 0n, type: "poison" }, // 35% Chance
-      { name: "🐟 Common Bass", chance: 0.15, mult: 1n, type: "catch" },
-      { name: "🐠 Tropical Tang", chance: 0.08, mult: 5n, type: "catch" },
-      { name: "🦈 Blue Shark", chance: 0.04, mult: 12n, type: "catch" },
-      { name: "✨ Golden Marlin", chance: 0.02, mult: 40n, type: "catch" },
-      { name: "👑 Sovereign Leviathan", chance: 0.01, mult: 150n, type: "catch" }
+      { name: "🐟 Common Bass", chance: 0.50, mult: 2n, type: "catch" },
+      { name: "🐠 Tropical Tang", chance: 0.20, mult: 8n, type: "catch" },
+      { name: "🤮 𝐏𝐎𝐈𝐒𝐎𝐍 𝐅𝐈𝐒𝐇", chance: 0.08, mult: 0n, type: "poison" }, // 8% Hazard
+      { name: "💣 𝐁𝐎𝐌𝐁 𝐅𝐈𝐒𝐇", chance: 0.07, mult: 0n, type: "bomb" },     // 7% Hazard
+      { name: "🦈 Blue Shark", chance: 0.10, mult: 20n, type: "catch" },
+      { name: "✨ Golden Marlin", chance: 0.04, mult: 60n, type: "catch" },
+      { name: "👑 Sovereign Leviathan", chance: 0.01, mult: 250n, type: "catch" }
     ];
 
     let catchResult = fishPool[0];
@@ -71,33 +71,31 @@ module.exports = {
       }
     }
 
-    // 3. EXECUTION LOGIC
     let finalBalance = userMoney;
     let status = "";
     let impactMsg = "";
 
     if (catchResult.type === "bomb") {
-      const loss = userMoney / 10n;
+      const loss = userMoney / 50n; // Only 2% loss
       finalBalance = userMoney - loss;
       status = "☣️ 𝐃𝐄𝐓𝐎𝐍𝐀𝐓𝐈𝐎𝐍!";
       impactMsg = `💸 𝐃𝐚𝐦𝐚𝐠𝐞: -$${fmt(loss)}\n⚠️ 𝐑𝐨𝐝 𝐃𝐚𝐦𝐚𝐠𝐞𝐝: Reset to Level 1`;
       await usersData.set(senderID, { data: { ...userData.data, rodLevel: 1 } });
     } 
     else if (catchResult.type === "poison") {
-      const loss = userMoney / 5n;
+      const loss = userMoney / 25n; // Only 4% loss
       finalBalance = userMoney - loss;
       status = "🧪 𝐓𝐎𝐗𝐈𝐂 𝐄𝐗𝐏𝐎𝐒𝐔𝐑𝐄!";
-      impactMsg = `💸 𝐌𝐞𝐝𝐢𝐜𝐚𝐥 𝐅𝐞𝐞: -$${fmt(loss)}\n🍀 𝐑𝐨𝐝 𝐢𝐬 𝐬𝐚𝐟𝐞, 𝐛𝐮𝐭 𝐲𝐨𝐮𝐫 𝐰𝐚𝐥𝐥𝐞𝐭 𝐢𝐬𝐧'𝐭.`;
+      impactMsg = `💸 𝐌𝐞𝐝𝐢𝐜𝐚𝐥 𝐅𝐞𝐞: -$${fmt(loss)}\n🍀 𝐑𝐨𝐝 𝐢𝐬 𝐬𝐚𝐟𝐞.`;
     } 
     else {
-      const baseValue = 1000n;
+      const baseValue = 500n; // Lowered base to accommodate higher multipliers
       const totalWin = catchResult.mult * currentRod.maxMult * baseValue;
       finalBalance = userMoney + totalWin;
       status = "🌊 𝐒𝐔𝐂𝐂𝐄𝐒𝐒𝐅𝐔𝐋 𝐇𝐀𝐔𝐋";
       impactMsg = `✨ 𝐘𝐢𝐞𝐥𝐝: ${catchResult.mult * currentRod.maxMult}𝐱\n💰 𝐏𝐫𝐨𝐟𝐢𝐭: +$${fmt(totalWin)}`;
     }
 
-    // 4. UI CONSTRUCTION
     let msg = `🏛️ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐓𝐈𝐃𝐄𝐒\n`;
     msg += `━━━━━━━━━━━━━━━━━━\n`;
     msg += `🎣 𝐑𝐨𝐝: ${currentRod.name}\n`;
