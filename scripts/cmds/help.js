@@ -5,125 +5,88 @@ const { utils } = global;
 module.exports = {
   config: {
     name: "help",
-    version: "2.9",
+    version: "3.2",
     role: 0,
     countdown: 0,
-    author: "Rakib Adil", // if you change this u'r gay
-    description: "Displays all available commands and their categories in a premium style.",
-    category: "help",
+    author: "Minh Anh",
+    description: "Displays the Sovereign Command Registry with unified luxury aesthetics.",
+    category: "system",
   },
-  
+
   onStart: async ({ api, event, args }) => {
+    const { threadID, messageID } = event;
     const cmdsFolderPath = path.join(__dirname, '.');
     const files = fs.readdirSync(cmdsFolderPath).filter(file => file.endsWith('.js') && file !== "help.js");
-    
+
     const safeRequire = (filePath) => {
       try {
         const cmd = require(filePath);
         return cmd && cmd.config ? cmd : null;
-      } catch (e) {
-        console.error("❌ Failed to load command:", filePath, e);
-        return null;
-      }
+      } catch (e) { return null; }
     };
-    
+
     const commands = files.map(file => safeRequire(path.join(cmdsFolderPath, file))).filter(Boolean);
-    
+
     const getCategories = () => {
       const categories = {};
       for (const command of commands) {
-        const categoryName = command.config.category || 'Uncategorized';
+        const categoryName = command.config.category?.toUpperCase() || 'UNCATEGORIZED';
         if (!categories[categoryName]) categories[categoryName] = [];
         categories[categoryName].push(command.config.name);
       }
       return categories;
     };
-    
-    // Modified sendMessage to support attachment
-    const sendMessage = async (message, attachmentUrl = null) => {
-      try {
-        const msgObj = { body: message };
-        if (attachmentUrl) {
-          msgObj.attachment = await utils.getStreamFromURL(attachmentUrl);
-        }
-        return await api.sendMessage(msgObj, event.threadID);
-      } catch (error) {
-        console.error('Error sending message:', error);
-      }
+
+    const sendMessage = async (message) => {
+      return await api.sendMessage({ body: message }, threadID, messageID);
     };
-    
+
     try {
-      if (args.length > 1 && args.includes('|')) {
-        const pipeIndex = args.indexOf('|');
-        const categoryName = args.slice(pipeIndex + 1).join(' ').toLowerCase();
-        const categories = getCategories();
-        const category = Object.keys(categories).find(cat => cat.toLowerCase() === categoryName);
-        
-        if (category) {
-          let msg = `╭───『 ${category.toUpperCase()} 』\n`;
-          msg += `✧ ${categories[category].join(' ✧ ')}\n`;
-          msg += "╰──────────────◊\n";
-          msg += `(Total: ${categories[category].length} cmds)`;
-          return sendMessage(msg);
-        } else {
-          return sendMessage(`❌ Category not found: ${categoryName}`);
-        }
-      }
-      
-      if (args[0]) {
+      // 1. DETAIL VIEW (Same as Bank Statement style)
+      if (args[0] && args[0] !== "|") {
         const commandName = args[0].toLowerCase();
         const command = commands.find(cmd =>
           cmd.config.name.toLowerCase() === commandName ||
           (cmd.config.aliases && cmd.config.aliases.includes(commandName))
         );
+
+        if (!command) return sendMessage(`❌ 𝐄𝐑𝐑𝐎𝐑: Function not found in registry.`);
+
+        const usage = command.config.guide?.en || command.config.guide || "No guide provided";
         
-        if (!command) return sendMessage(`❌ Command not found: ${commandName}`);
-        
-        const usage = command.config.guide?.en || command.config.guide;
-        let details = `╭───────────────────◊\n│ 🔹 COMMAND DETAILS\n├───────────────────◊\n`;
-        details += `│ ⚡ Name: ${command.config.name}\n`;
-        details += `│ 📝 Version: ${command.config.version || 'N/A'}\n`;
-        details += `│ 👤 Author: ${command.config.author || 'Unknown'}\n`;
-        details += `│ 🔐 Role: ${command.config.role ?? 'N/A'}\n`;
-        details += `│ 📂 Category: ${command.config.category || 'Uncategorized'}\n`;
-        if (command.config.aliases?.length) details += `│ 🔄 Aliases: ${command.config.aliases.join(', ')}\n`;
-        if (command.config.countDown !== undefined) details += `│ ⏱️ Cooldown: ${command.config.countDown}s\n`;
-        details += `│🧬 Usage: ${usage}\n`
-        details += `╰───────────────────◊\n💫 KIV BOT Command Info`;
+        let details = `🏛️ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐌𝐀𝐍𝐈𝐅𝐄𝐒𝐓\n`;
+        details += `━━━━━━━━━━━━━━━━━━\n`;
+        details += `⚡ 𝐅𝐮𝐧𝐜𝐭𝐢𝐨𝐧: ${command.config.name.toUpperCase()}\n`;
+        details += `📂 𝐂𝐥𝐚𝐬𝐬: ${command.config.category.toUpperCase()}\n`;
+        details += `🛡️ 𝐏𝐞𝐫𝐦𝐬: ${command.config.role == 1 ? "ADMIN" : "USER"}\n`;
+        details += `⏱️ 𝐃𝐞𝐥𝐚𝐲: ${command.config.countDown || 0}s\n`;
+        details += `━━━━━━━━━━━━━━━━━━\n`;
+        details += `📖 𝐔𝐒𝐀𝐆𝐄:\n${usage}\n`;
+        details += `━━━━━━━━━━━━━━━━━━\n`;
+        details += `👤 𝐀𝐮𝐭𝐡𝐨𝐫: ${command.config.author || 'Minh Anh'}`;
         return sendMessage(details);
       }
-      
-      const categories = getCategories();
-      let helpMessage = '';
-      for (const category in categories) {
-        helpMessage += `╭──『 ${category.toUpperCase()} 』\n`;
-        helpMessage += `✧ ${categories[category].join(' ✧ ')}\n`;
-        helpMessage += "╰──────────────◊\n";
-        helpMessage += `(Total: ${categories[category].length} cmds)\n\n`;
-      }
-      helpMessage += "╭────────────◊\n";
-      helpMessage += "│ » Type [ /help <cmd> ] for usage\n";
-      helpMessage += "│ » Type [ /help | category ] for category cmds\n";
-      helpMessage += "│ » Owner Contact: https://web.facebook.com/61576612175253\n";
-      helpMessage += "│ » Join Support GC: Null\n";
-      helpMessage += "╰────────────◊\n";
-      helpMessage += "          「  KAI BOT 」";
-      
-      /* Add your video/image/gif URL here
-      const imgUrl =[
-        
-      ];
-      
-     // const rndmImg = imgUrl[Math.floor(Math.random() * imgUrl.length)];
 
-       if you want to use image/video/gif with help list just delete the (//) and the :ext line after this
-        */
-    // return sendMessage(helpMessage, rndmImg)
+      // 2. MAIN REGISTRY VIEW (Unified Theme)
+      const categories = getCategories();
+      let helpMessage = `🏛️ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐌𝐀𝐈𝐍𝐅𝐑𝐀𝐌𝐄\n`;
+      helpMessage += `━━━━━━━━━━━━━━━━━━\n\n`;
+
+      for (const category in categories) {
+        helpMessage += `［ ${category} ］\n`;
+        helpMessage += `◈ ${categories[category].join('  ◈ ')}\n\n`;
+      }
+
+      helpMessage += `━━━━━━━━━━━━━━━━━━\n`;
+      helpMessage += `✨ 𝐒𝐲𝐬𝐭𝐞𝐦 𝐂𝐚𝐩𝐚𝐜𝐢𝐭𝐲: ${commands.length} Functions\n`;
+      helpMessage += `💡 𝐈𝐧𝐪𝐮𝐢𝐫𝐲: help [name]\n`;
+      helpMessage += `━━━━━━━━━━━━━━━━━━\n`;
+      helpMessage += `   𝐄𝐗𝐄𝐂𝐔𝐓𝐄𝐃 𝐁𝐘 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐄𝐋𝐈𝐓𝐄`;
+
       return sendMessage(helpMessage);
-      
+
     } catch (error) {
-      console.error('❌ Error in help command:', error);
-      return sendMessage('⚠️ An error occurred while generating the help message.');
+      return sendMessage('⚠️ 𝐒𝐲𝐬𝐭𝐞𝐦 𝐅𝐚𝐮𝐥𝐭: Registry inaccessible.');
     }
   }
 };
