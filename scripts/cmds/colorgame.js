@@ -1,5 +1,5 @@
 module.exports.config = {
-  name: "color",
+  name: "colorgame",
   aliases: ["cg", "betcolor"],
   version: "2.0",
   author: "Minh Anh",
