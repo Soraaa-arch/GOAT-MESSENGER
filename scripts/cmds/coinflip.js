@@ -4,7 +4,7 @@ module.exports = {
   config: {
     name: "coinflip",
     aliases: ["cf", "flip", "duel"],
-    version: "1.0.1",
+    version: "1.0.2",
     author: "Minh Anh",
     countDown: 5,
     role: 0,
@@ -41,12 +41,13 @@ module.exports = {
     const result = sides[Math.floor(Math.random() * sides.length)];
     const isWin = choice === result;
 
-    // 3. 2X PAYOUT LOGIC
-    let winAmount = betAmount * 2n;
+    // 3. 3X PAYOUT LOGIC
+    let multiplier = 3n;
+    let winAmount = betAmount * multiplier;
 
     let finalBalance;
     if (isWin) {
-      // User keeps stake and gains the profit (winAmount - betAmount = betAmount)
+      // User keeps stake and gains the net profit (e.g., Stake $1k -> Total $3k -> Profit $2k)
       finalBalance = userMoney + (winAmount - betAmount);
       await usersData.set(senderID, { data: { ...userData.data, money: finalBalance.toString() } });
     } else {
@@ -63,7 +64,7 @@ module.exports = {
     msg += `🪙 𝐑𝐞𝐬𝐮𝐥𝐭: ${sideEmoji}\n`;
     msg += `👤 𝐂𝐡𝐨𝐢𝐜𝐞: ${choice.toUpperCase()}\n`;
     msg += `💰 𝐒𝐭𝐚𝐤𝐞: $${fmt(betAmount)}\n`;
-    msg += `⚡ 𝐏𝐚𝐲𝐨𝐮𝐭: 𝟐𝐱\n`;
+    msg += `⚡ 𝐏𝐚𝐲𝐨𝐮𝐭: 𝟑𝐱\n`;
     msg += `━━━━━━━━━━━━━━━━━━\n`;
     msg += `${status}\n`;
     msg += isWin ? `✨ 𝐍𝐞𝐭 𝐏𝐫𝐨𝐟𝐢𝐭: +$${fmt(winAmount - betAmount)}` : `💸 𝐋𝐨𝐬𝐬: -$${fmt(betAmount)}`;
