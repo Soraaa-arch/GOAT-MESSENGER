@@ -3,21 +3,55 @@ const path = require("path");
 const { createCanvas, loadImage } = require("canvas");
 const axios = require("axios");
 
+// Function to generate a unique, realistic 16-digit number based on senderID
+function generateUniqueCardNumber(uid) {
+  const s = uid.toString();
+  // We use parts of the UID and pad it to ensure it's always 16 digits
+  const part1 = s.slice(0, 4).padEnd(4, '0');
+  const part2 = s.slice(4, 8).padEnd(4, '1');
+  const part3 = s.length > 12 ? s.slice(8, 12) : "9901";
+  const part4 = s.slice(-4);
+  return `${part1} ${part2} ${part3} ${part4}`;
+}
+
 function formatBalance(num) {
-  if (num >= 1e9) return (num / 1e9).toFixed(1) + "B";
-  if (num >= 1e6) return (num / 1e6).toFixed(1) + "M";
-  if (num >= 1e3) return (num / 1e3).toFixed(1) + "K";
-  return num;
+  try {
+    const n = BigInt(Math.floor(num));
+    const suffixes = [
+      { value: 10n**100n, symbol: "Googol" },
+      { value: 10n**33n,  symbol: "D" }, 
+      { value: 10n**30n,  symbol: "N" }, 
+      { value: 10n**27n,  symbol: "O" }, 
+      { value: 10n**24n,  symbol: "Spt" }, 
+      { value: 10n**21n,  symbol: "Sx" }, 
+      { value: 10n**18n,  symbol: "Qi" }, 
+      { value: 10n**15n,  symbol: "Q" }, 
+      { value: 10n**12n,  symbol: "T" }, 
+      { value: 10n**9n,   symbol: "B" }, 
+      { value: 10n**6n,   symbol: "M" }, 
+      { value: 10n**3n,   symbol: "K" }
+    ];
+
+    for (const { value, symbol } of suffixes) {
+      if (n >= value) {
+        let res = (n / (value / 10n)).toString();
+        return res.replace(/(\d)$/, ".$1") + symbol;
+      }
+    }
+    return n.toString();
+  } catch (e) {
+    return "Massive"; 
+  }
 }
 
 module.exports.config = {
   name: "balance",
   aliases: ["bal"],
-  version: "7.0",
+  version: "11.0",
   author: "MOHAMMAD AKASH",
   countDown: 5,
   role: 0,
-  shortDescription: "Real Bank Card",
+  shortDescription: "Exclusive Digital Premium Card",
   category: "economy"
 };
 
@@ -26,115 +60,115 @@ module.exports.onStart = async function ({ api, event, usersData }) {
 
   try {
     const userData = await usersData.get(senderID);
-    const balance = userData?.data?.money ?? 100;
+    const balance = userData?.data?.money ?? 0;
     const userName = await usersData.getName(senderID);
     const formatted = formatBalance(balance);
-
-    // ===== Avatar Load =====
-    let avatar = null;
-    try {
-      const picURL = `https://graph.facebook.com/${senderID}/picture?height=1500&width=1500&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
-      const response = await axios({ url: picURL, method: "GET", responseType: "arraybuffer" });
-      avatar = await loadImage(response.data);
-    } catch (err) {
-      console.log("Avatar Load Failed:", err.message);
-    }
+    const uniqueCardNum = generateUniqueCardNumber(senderID);
 
     const width = 850;
     const height = 520;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext("2d");
 
-    // ===== Card Background =====
+    // ===== Premium Background (Obsidian) =====
     const grad = ctx.createLinearGradient(0, 0, width, height);
-    grad.addColorStop(0, "#0f4c81");
-    grad.addColorStop(1, "#1c77c3");
+    grad.addColorStop(0, "#0a0a0a");
+    grad.addColorStop(0.5, "#1a1a1a");
+    grad.addColorStop(1, "#000000");
     ctx.fillStyle = grad;
-    roundRect(ctx, 0, 0, width, height, 30, true);
+    
+    // Draw Round Rect
+    ctx.beginPath();
+    ctx.roundRect(0, 0, width, height, 40);
+    ctx.fill();
 
-    // ===== Bank Name =====
-    ctx.font = "bold 36px Arial";
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText("GOAT NATIONAL BANK", 60, 90);
-
-    // ===== Chip =====
-    ctx.fillStyle = "#d4af37";
-    roundRect(ctx, 60, 140, 90, 65, 10, true);
-
-    // ===== Card Number =====
-    ctx.font = "30px monospace";
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText("1234 5678 9012 8456", 60, 250);
-
-    // ===== Valid Thru =====
-    ctx.font = "20px Arial";
-    ctx.fillText("VALID THRU", 60, 300);
-    ctx.font = "24px Arial";
-    ctx.fillText("12/29", 60, 330);
-
-    // ===== Holder Name =====
-    ctx.font = "bold 26px Arial";
-    ctx.fillText(userName.toUpperCase(), 60, 380);
-
-    // ===== Balance Box =====
-    const boxX = 480, boxY = 250, boxW = 300, boxH = 180;
-    ctx.fillStyle = "rgba(255,255,255,0.18)";
-    roundRect(ctx, boxX, boxY, boxW, boxH, 25, true);
-
-    ctx.textAlign = "center";
-    ctx.font = "22px Arial";
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText("AVAILABLE BALANCE", boxX + boxW / 2, boxY + 50);
-    ctx.font = "bold 50px Arial";
-    ctx.fillText("$" + formatted, boxX + boxW / 2, boxY + 120);
-    ctx.textAlign = "left";
-
-    // ===== Avatar =====
-    if (avatar) {
-      const size = 110;
-      const x = width - size - 50;
-      const y = 50;
-      ctx.save();
+    // Subtle Premium Texture
+    ctx.strokeStyle = "rgba(212, 175, 55, 0.05)";
+    ctx.lineWidth = 1;
+    for (let i = 0; i < width; i += 40) {
       ctx.beginPath();
-      ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(avatar, x, y, size, size);
-      ctx.restore();
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(x + size / 2, y + size / 2, size / 2 + 2, 0, Math.PI * 2);
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i + 200, height);
       ctx.stroke();
     }
 
-    const buffer = canvas.toBuffer("image/png");
+    // ===== Bank Name =====
+    ctx.font = "bold 40px Arial";
+    ctx.fillStyle = "#D4AF37";
+    ctx.fillText("ZENITH DIGITAL BANK", 60, 85);
+
+    // ===== Gold Chip =====
+    const chipGrad = ctx.createLinearGradient(60, 140, 150, 205);
+    chipGrad.addColorStop(0, "#BF953F");
+    chipGrad.addColorStop(0.5, "#FCF6BA");
+    chipGrad.addColorStop(1, "#AA771C");
+    ctx.fillStyle = chipGrad;
+    ctx.beginPath();
+    ctx.roundRect(60, 140, 95, 70, 12);
+    ctx.fill();
+
+    // ===== UNIQUE CARD NUMBER =====
+    ctx.font = "32px monospace";
+    ctx.fillStyle = "#E5E4E2"; 
+    ctx.fillText(uniqueCardNum, 60, 260);
+
+    // ===== Holder Info =====
+    ctx.font = "italic 24px Arial";
+    ctx.fillStyle = "#aaaaaa";
+    ctx.fillText("CARD HOLDER", 60, 360);
+    ctx.font = "bold 30px Arial";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(userName.toUpperCase(), 60, 400);
+
+    // ===== Balance Box =====
+    const boxX = 430, boxY = 280, boxW = 360, boxH = 160;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.07)";
+    ctx.strokeStyle = "rgba(212, 175, 55, 0.3)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, boxW, boxH, 20);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+    ctx.font = "bold 18px Arial";
+    ctx.fillStyle = "#D4AF37";
+    ctx.fillText("TOTAL VALUATION", boxX + boxW / 2, boxY + 45);
+
+    let balText = "$" + formatted;
+    let fontSize = balText.length > 12 ? 35 : 55;
+    ctx.font = `bold ${fontSize}px Arial`;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(balText, boxX + boxW / 2, boxY + 115);
+    ctx.textAlign = "left";
+
+    // ===== Avatar =====
+    try {
+      const picURL = `https://graph.facebook.com/${senderID}/picture?height=500&width=500&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
+      const response = await axios.get(picURL, { responseType: "arraybuffer" });
+      const avatar = await loadImage(response.data);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(width - 110, 100, 65, 0, Math.PI * 2);
+      ctx.strokeStyle = "#D4AF37";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.clip();
+      ctx.drawImage(avatar, width - 175, 35, 130, 130);
+      ctx.restore();
+    } catch (e) { console.log("Avatar error"); }
+
     const cachePath = path.join(__dirname, "cache");
     if (!fs.existsSync(cachePath)) fs.mkdirSync(cachePath);
-    const filePath = path.join(cachePath, "balance.png");
-    fs.writeFileSync(filePath, buffer);
-
-    await api.sendMessage({ attachment: fs.createReadStream(filePath) }, threadID, messageID);
-
-    setTimeout(() => { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); }, 10000);
+    const filePath = path.join(cachePath, `premium_bal_${senderID}.png`);
+    
+    fs.writeFileSync(filePath, canvas.toBuffer("image/png"));
+    
+    return api.sendMessage({ attachment: fs.createReadStream(filePath) }, threadID, () => {
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }, messageID);
 
   } catch (err) {
-    console.error(err);
-    api.sendMessage("Card generation failed!", threadID, messageID);
+    return api.sendMessage("Error: " + err.message, threadID, messageID);
   }
 };
-
-function roundRect(ctx, x, y, w, h, r, fill = false, stroke = false) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-  if (fill) ctx.fill();
-  if (stroke) ctx.stroke();
-}
