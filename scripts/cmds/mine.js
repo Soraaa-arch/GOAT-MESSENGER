@@ -1,87 +1,106 @@
-module.exports.config = {
-  name: "mine",
-  aliases: ["btc", "mining"],
-  version: "3.5",
-  author: "Minh Anh",
-  countDown: 86400, // 24-hour cooldown
-  role: 0,
-  category: "economy",
-  shortDescription: "Daily Sovereign Hash-Power Sequence",
-  guide: "{p}mine"
-};
+const fmt = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
-/**
- * BigInt parsing to handle massive bank balances.
- */
-function getSafeBigInt(value) {
-  try {
-    if (!value) return 0n;
-    const clean = value.toString().split('.')[0].replace(/[^0-9]/g, '');
-    return clean ? BigInt(clean) : 0n;
-  } catch (e) {
-    return 0n;
-  }
-}
+module.exports = {
+  config: {
+    name: "mines",
+    aliases: ["mine", "m"],
+    version: "1.0.0",
+    author: "Minh Anh",
+    countDown: 5,
+    role: 0,
+    category: "economy",
+    guide: {
+      en: "{p}mines [bombs 1-24] [amount]"
+    }
+  },
 
-function fmt(num) {
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
+  onStart: async function ({ api, event, args, usersData }) {
+    const { threadID, messageID, senderID } = event;
 
-/**
- * Hardware Registry: Must match the levels in hashshop.js
- */
-const hardwareRegistry = {
-  0: { name: "INTEGRATED CPU", mult: 1n },
-  1: { name: "ANTMINER S19", mult: 2n },
-  2: { name: "SOVEREIGN LIQUID RIG", mult: 5n },
-  3: { name: "QUANTUM HASH ARRAY", mult: 15n },
-  4: { name: "SATELLITE MINE NODE", mult: 50n }
-};
+    // 1. INPUT VALIDATION
+    const bombCount = parseInt(args[0]);
+    const betInput = args[1]?.toLowerCase();
 
-module.exports.onStart = async function ({ api, event, usersData }) {
-  const { senderID, threadID, messageID } = event;
+    if (isNaN(bombCount) || bombCount < 1 || bombCount > 24 || !betInput) {
+      return api.sendMessage("🏛️ 𝐌𝐈𝐍𝐄𝐒 𝐏𝐑𝐎𝐓𝐎𝐂𝐎𝐋\n━━━━━━━━━━━━━━━━━━\n💡 𝐔𝐬𝐚𝐠𝐞: {p}mines [1-24] [amount]\nExample: {p}mines 3 5000", threadID, messageID);
+    }
 
-  try {
-    const userData = await usersData.get(senderID) || { data: {} };
-    const name = await usersData.getName(senderID) || "Operator";
+    const userData = await usersData.get(senderID);
+    const rawMoney = (userData.data.money || "0").toString().split('.')[0].split('e')[0];
+    const userMoney = BigInt(rawMoney);
+
+    let betAmount;
+    if (betInput === "all") {
+      betAmount = userMoney;
+    } else {
+      const sanitizedBet = betInput?.replace(/[^0-9]/g, '') || "0";
+      betAmount = sanitizedBet === "" ? 0n : BigInt(sanitizedBet);
+    }
+
+    if (betAmount <= 0n) return api.sendMessage("❌ 𝐈𝐍𝐕𝐀𝐋𝐈𝐃 𝐒𝐓𝐀𝐊𝐄.", threadID, messageID);
+    if (betAmount > userMoney) return api.sendMessage("❌ 𝐈𝐍𝐒𝐔𝐅𝐅𝐈𝐂𝐈𝐄𝐍𝐓 𝐂𝐑𝐄𝐃𝐈𝐓𝐒.", threadID, messageID);
+
+    // 2. THE ADDICTION ENGINE (Probability Logic)
+    // We simulate a "perfect" session where the user picks 3 random spots.
+    // In a real GUI this would be interactive, but for Chat, we simulate 
+    // a 3-step deep-dive to make it feel intense.
     
-    // Retrieve Level from Hash Shop (defaults to 0 if not purchased)
-    const currentLevel = userData.data.minerLevel || 0;
-    const rig = hardwareRegistry[currentLevel] || hardwareRegistry[0];
+    const spotsToDig = 3; 
+    let currentMultiplier = 1.0;
+    let hitMine = false;
+    let path = [];
 
-    // Calculate Reward: Base ($10M-$50M) * Rig Multiplier
-    const baseProfit = BigInt(Math.floor(Math.random() * 40000000) + 10000000);
-    const finalReward = baseProfit * rig.mult;
-    
-    const currentBalance = getSafeBigInt(userData.data.money || "0");
-    const newBalance = currentBalance + finalReward;
+    for (let i = 0; i < spotsToDig; i++) {
+      // Probability of hitting a gem: (Total Slots - Bombs - Already Dug) / (Total Slots - Already Dug)
+      const totalSlots = 25;
+      const chanceOfGem = (totalSlots - bombCount - i) / (totalSlots - i);
+      
+      if (Math.random() < chanceOfGem) {
+        // Multiplier increases more aggressively with more bombs
+        currentMultiplier += (bombCount * 0.4) + (i * 0.2);
+        path.push("💎");
+      } else {
+        hitMine = true;
+        path.push("💥");
+        break;
+      }
+    }
 
-    // Update Database
-    await usersData.set(senderID, { 
-      data: { 
-        ...userData.data, 
-        money: newBalance.toString() 
-      } 
-    });
+    // 3. BALANCE CALCULATION
+    let finalBalance;
+    let status = "";
+    let yieldDetails = "";
 
-    // Luxury Output
-    const msg = {
-      body: `🏛️ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐌𝐈𝐍𝐈𝐍𝐆 𝐍𝐄𝐓𝐖𝐎𝐑𝐊\n` +
-            `━━━━━━━━━━━━━━━━━━\n` +
-            `👤 𝐎𝐩𝐞𝐫𝐚𝐭𝐨𝐫: ${name.toUpperCase()}\n` +
-            `⚙️ 𝐇𝐚𝐫𝐝𝐰𝐚𝐫𝐞: ${rig.name}\n` +
-            `⚡ 𝐁𝐨𝐨𝐬𝐭: ${rig.mult}x Efficiency\n\n` +
-            `📦 𝐁𝐥𝐨𝐜𝐤 𝐑𝐞𝐰𝐚𝐫𝐝: +$${fmt(finalReward)}\n` +
-            `━━━━━━━━━━━━━━━━━━\n` +
-            `🏦 𝐔𝐏𝐃𝐀𝐓𝐄𝐃 𝐋𝐄𝐃𝐆𝐄𝐑:\n` +
-            `   $${fmt(newBalance)}\n` +
-            `━━━━━━━━━━━━━━━━━━\n` +
-            `𝐍𝐞𝐱𝐭 𝐒𝐞𝐪𝐮𝐞𝐧𝐜𝐞 𝐚𝐯𝐚𝐢𝐥𝐚𝐛𝐥𝐞 𝐢𝐧 𝟐𝟒𝐡`
-    };
+    if (!hitMine) {
+      const multiplierScaled = BigInt(Math.floor(currentMultiplier * 100));
+      const winAmount = (betAmount * multiplierScaled) / 100n;
+      finalBalance = userMoney + (winAmount - betAmount);
+      status = "🛡️ 𝐄𝐗𝐓𝐑𝐀𝐂𝐓𝐈𝐎𝐍 𝐒𝐔𝐂𝐂𝐄𝐒𝐒";
+      yieldDetails = `✨ 𝐘𝐢𝐞𝐥𝐝: ${currentMultiplier.toFixed(2)}𝐱\n💰 𝐏𝐫𝐨𝐟𝐢𝐭: +$${fmt(winAmount - betAmount)}`;
+    } else {
+      finalBalance = userMoney - betAmount;
+      status = "☣️ 𝐓𝐇𝐄𝐑𝐌𝐀𝐋 𝐂𝐇𝐀𝐑𝐆𝐄 𝐃𝐄𝐓𝐎𝐍𝐀𝐓𝐄𝐃";
+      yieldDetails = `💸 𝐋𝐨𝐬𝐬: -$${fmt(betAmount)}`;
+    }
+
+    // 4. UI CONSTRUCTION (Visual Grid)
+    const grid = path.concat(Array(5 - path.length).fill("❓")).join(" ");
+
+    let msg = `🏛️ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐌𝐈𝐍𝐄𝐒\n`;
+    msg += `━━━━━━━━━━━━━━━━━━\n`;
+    msg += `💣 𝐃𝐢𝐟𝐟𝐢𝐜𝐮𝐥𝐭𝐲: ${bombCount} 𝐁𝐨𝐦𝐛𝐬\n`;
+    msg += `🗺️ 𝐒𝐜𝐚𝐧: [ ${grid} ]\n`;
+    msg += `━━━━━━━━━━━━━━━━━━\n`;
+    msg += `${status}\n`;
+    msg += `${yieldDetails}\n`;
+    msg += `━━━━━━━━━━━━━━━━━━\n`;
+    msg += `🏦 𝐁𝐀𝐋𝐀𝐍𝐂𝐄: $${fmt(finalBalance)}\n`;
+    msg += `━━━━━━━━━━━━━━━━━━\n`;
+    msg += `   𝐄𝐗𝐄𝐂𝐔𝐓𝐄𝐃 𝐁𝐘 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐄𝐋𝐈𝐓𝐄`;
+
+    // 5. DATABASE SYNC
+    await usersData.set(senderID, { data: { ...userData.data, money: finalBalance.toString() } });
 
     return api.sendMessage(msg, threadID, messageID);
-
-  } catch (err) {
-    return api.sendMessage("⚠️ Terminal Fault: " + err.message, threadID, messageID);
   }
 };
