@@ -5,34 +5,44 @@ const axios = require("axios");
 
 if (!global.milestoneRegistry) global.milestoneRegistry = {};
 
+/**
+ * FIXED: Secure parsing to prevent "Massive" error.
+ * Strips decimals and non-numeric characters before BigInt conversion.
+ */
+function getSafeBigInt(value) {
+  try {
+    if (!value) return 0n;
+    // Remove decimals, then remove everything that isn't a digit
+    const clean = value.toString().split('.')[0].replace(/[^0-9]/g, '');
+    return clean ? BigInt(clean) : 0n;
+  } catch (e) {
+    return 0n;
+  }
+}
+
 function getTierData(balance) {
-  const n = BigInt(Math.floor(balance));
+  const n = getSafeBigInt(balance);
   
-  // 10^100: GOOGOL
   if (n >= 10n**100n) return { 
     id: 6, name: "GOOGOL OVERLORD", rank: "COSMIC ENTITY", 
     color: ["#000000", "#1a0033", "#4b0082"], accent: "#cc00ff", 
     chip: ["#ff00ff", "#ffffff"], text: "#ffffff", glass: "rgba(255, 255, 255, 0.1)" 
   };
-  // 10^30: NEW TIER - CELESTIAL DIAMOND
   if (n >= 10n**30n) return { 
     id: 5, name: "CELESTIAL DIAMOND", rank: "GALAXY ARCHITECT", 
     color: ["#0f2027", "#203a43", "#2c5364"], accent: "#b9f2ff", 
     chip: ["#b9f2ff", "#ffffff"], text: "#ffffff", glass: "rgba(185, 242, 255, 0.2)", special: "hologram" 
   };
-  // 10^15: AETHER PLATINUM
   if (n >= 10n**15n) return { 
     id: 4, name: "AETHER PLATINUM", rank: "AETHER ARCHON", 
     color: ["#cfd9df", "#ffffff", "#e2ebf0"], accent: "#00d4ff", 
     chip: ["#00d4ff", "#ffffff"], text: "#1a1a1a", glass: "rgba(255, 255, 255, 0.5)", special: "hologram" 
   };
-  // 10^12: ZENITH GOLD
   if (n >= 10n**12n) return { 
     id: 3, name: "ZENITH GOLD", rank: "TRILLIONAIRE ELITE", 
     color: ["#0f0f0f", "#2c2c2c"], accent: "#D4AF37", 
     chip: ["#BF953F", "#FCF6BA"], text: "#ffffff", glass: "rgba(255, 215, 0, 0.1)" 
   };
-  // 10^9: TITAN IRON
   if (n >= 10n**9n) return { 
     id: 2, name: "TITAN IRON", rank: "BILLIONAIRE TYCOON", 
     color: ["#232526", "#414345"], accent: "#e5e4e2", 
@@ -46,45 +56,43 @@ function getTierData(balance) {
 }
 
 function formatBalance(num) {
-  try {
-    const n = BigInt(num.toString().split('.')[0] || 0);
-    if (n === 0n) return "0";
+  const n = getSafeBigInt(num);
+  if (n === 0n) return "0";
 
-    const suffixes = [
-      { v: 10n**100n, s: "Googol" },
-      { v: 10n**33n,  s: "Dec" },   // Decillion
-      { v: 10n**30n,  s: "Non" },   // Nonillion
-      { v: 10n**27n,  s: "Oct" },   // Octillion
-      { v: 10n**24n,  s: "Sep" },   // Septillion
-      { v: 10n**21n,  s: "Sex" },   // Sextillion
-      { v: 10n**18n,  s: "Qui" },   // Quintillion
-      { v: 10n**15n,  s: "Q" },     // Quadrillion
-      { v: 10n**12n,  s: "T" },     // Trillion
-      { v: 10n**9n,   s: "B" },     // Billion
-      { v: 10n**6n,   s: "M" },     // Million
-      { v: 10n**3n,   s: "K" }      // Thousand
-    ];
+  const suffixes = [
+    { v: 10n**100n, s: "Googol" },
+    { v: 10n**33n,  s: "Dec" },
+    { v: 10n**30n,  s: "Non" },
+    { v: 10n**27n,  s: "Oct" },
+    { v: 10n**24n,  s: "Sep" },
+    { v: 10n**21n,  s: "Sex" },
+    { v: 10n**18n,  s: "Qui" },
+    { v: 10n**15n,  s: "Q" },
+    { v: 10n**12n,  s: "T" },
+    { v: 10n**9n,   s: "B" },
+    { v: 10n**6n,   s: "M" },
+    { v: 10n**3n,   s: "K" }
+  ];
 
-    for (const { v, s } of suffixes) {
-      if (n >= v) {
-        const calculation = (n / (v / 10n)).toString();
-        const whole = calculation.slice(0, -1) || "0";
-        const decimal = calculation.slice(-1);
-        return `${whole}.${decimal}${s}`;
-      }
+  for (const { v, s } of suffixes) {
+    if (n >= v) {
+      const calculation = (n / (v / 10n)).toString();
+      const whole = calculation.slice(0, -1) || "0";
+      const decimal = calculation.slice(-1);
+      return ${whole}.${decimal}${s};
     }
-    return n.toString();
-  } catch (e) { return "Massive"; }
+  }
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 module.exports.config = {
   name: "balance",
   aliases: ["bal"],
-  version: "31.0",
-  author: "MOHAMMAD AKASH x GEMINI",
+  version: "32.0",
+  author: "Mohammad Akash x Minh Anh",
   countDown: 5,
   role: 0,
-  shortDescription: "Evolutionary Wealth Card with Googol support",
+  shortDescription: "Evolutionary Wealth Card",
   category: "economy"
 };
 
@@ -95,9 +103,9 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     const userData = await usersData.get(senderID) || { data: {} };
     if (!userData.data) userData.data = {};
     
-    // Safety check for BigInt conversion
     const balance = userData.data.money || "0";
-    const userName = await usersData.getName(senderID);
+    const userName = await usersData.getName(senderID) || "Facebook User";
+    
     const tier = getTierData(balance);
     const formatted = formatBalance(balance);
 
@@ -145,7 +153,7 @@ module.exports.onStart = async function ({ api, event, usersData }) {
     const s = senderID.toString();
     const cardNum = s.slice(0,4) + " " + s.slice(4,8) + " " + s.slice(8,12).padEnd(4,"*") + " " + s.slice(-4);
     ctx.font = "30px monospace"; ctx.fillStyle = tier.text; ctx.fillText(cardNum, 60, 270);
-    ctx.font = "32px Arial"; ctx.fillText(userName.toUpperCase(), 60, 420);
+    ctx.font = "bold 32px Arial"; ctx.fillText(userName.toUpperCase(), 60, 420);
 
     // Balance Glass Box
     const boxX = 410, boxY = 280, boxW = 400, boxH = 170;
@@ -164,7 +172,7 @@ module.exports.onStart = async function ({ api, event, usersData }) {
 
     // Avatar Logic
     try {
-      const u = `https://graph.facebook.com/${senderID}/picture?height=500&width=500&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
+      const u = https://graph.facebook.com/${senderID}/picture?height=500&width=500&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662;
       const response = await axios.get(u, { responseType: "arraybuffer" });
       const avatar = await loadImage(response.data);
       ctx.save(); 
