@@ -4,7 +4,7 @@ module.exports = {
   config: {
     name: "fish",
     aliases: ["fishing", "catch"],
-    version: "2.0.0",
+    version: "3.5.0",
     author: "Minh Anh",
     countDown: 5,
     role: 0,
@@ -17,6 +17,7 @@ module.exports = {
   onStart: async function ({ api, event, args, usersData }) {
     const { threadID, messageID, senderID } = event;
 
+    // 1. DATA INITIALIZATION
     const userData = await usersData.get(senderID);
     const rawMoney = (userData.data.money || "0").toString().split('.')[0].split('e')[0];
     const userMoney = BigInt(rawMoney);
@@ -25,39 +26,42 @@ module.exports = {
     let rodLevel = parseInt(userData.data.rodLevel);
 
     const rods = [
-      { name: "🎋 Bamboo Stick", price: 0n, breakChance: 0.15, maxMult: 5n },
-      { name: "🎣 Carbon Rod", price: 500000n, breakChance: 0.10, maxMult: 15n },
-      { name: "⛓️ Titanium Rod", price: 5000000n, breakChance: 0.05, maxMult: 50n },
-      { name: "🔱 Sovereign Harpoon", price: 50000000n, breakChance: 0.01, maxMult: 200n }
+      { name: "🎋 Bamboo Stick", price: 0n, breakChance: 0.25, maxMult: 5n },
+      { name: "🎣 Carbon Rod", price: 500000n, breakChance: 0.15, maxMult: 15n },
+      { name: "⛓️ Titanium Rod", price: 5000000n, breakChance: 0.10, maxMult: 50n },
+      { name: "🔱 Sovereign Harpoon", price: 50000000n, breakChance: 0.05, maxMult: 250n }
     ];
 
     const currentRod = rods[rodLevel - 1];
 
+    // 2. UPGRADE SYSTEM
     if (args[0] === "upgrade") {
       if (rodLevel >= rods.length) return api.sendMessage("✨ 𝐘𝐨𝐮 𝐚𝐥𝐫𝐞𝐚𝐝𝐲 𝐰𝐢𝐞𝐥𝐝 𝐭𝐡𝐞 𝐒𝐨𝐯𝐞𝐫𝐞𝐢𝐠𝐧 𝐇𝐚𝐫𝐩𝐨𝐨𝐧.", threadID, messageID);
       const nextRod = rods[rodLevel];
       if (userMoney < nextRod.price) return api.sendMessage(`❌ 𝐈𝐍𝐒𝐔𝐅𝐅𝐈𝐂𝐈𝐄𝐍𝐓 𝐂𝐑𝐄𝐃𝐈𝐓𝐒.\nRequired: $${fmt(nextRod.price)}`, threadID, messageID);
 
       const finalBalance = userMoney - nextRod.price;
-      await usersData.set(senderID, { data: { ...userData.data, money: finalBalance.toString(), rodLevel: rodLevel + 1 } });
+      await usersData.set(senderID, { 
+        money: finalBalance.toString(),
+        data: { ...userData.data, money: finalBalance.toString(), rodLevel: rodLevel + 1 } 
+      });
       return api.sendMessage(`🛠️ 𝐑𝐎𝐃 𝐔𝐏𝐆𝐑𝐀𝐃𝐄𝐃\n━━━━━━━━━━━━━━━━━━\nNew Rod: ${nextRod.name}\nCost: -$${fmt(nextRod.price)}\n━━━━━━━━━━━━━━━━━━\n🏦 𝐁𝐚𝐥𝐚𝐧𝐜𝐞: $${fmt(finalBalance)}`, threadID, messageID);
     }
 
-    // Standard Rod Break Check
+    // 3. RANDOM BREAK CHANCE
     if (Math.random() < currentRod.breakChance) {
       await usersData.set(senderID, { data: { ...userData.data, rodLevel: 1 } });
       return api.sendMessage(`💥 𝐒𝐍𝐀𝐏!\n━━━━━━━━━━━━━━━━━━\nYour ${currentRod.name} has shattered.\n⚠️ 𝐑𝐨𝐝 𝐫𝐞𝐬𝐞𝐭 𝐭𝐨 𝐁𝐚𝐦𝐛𝐨𝐨 𝐒𝐭𝐢𝐜𝐤.`, threadID, messageID);
     }
 
-    // NORMALIZED FISH POOL (Balanced Hazards)
+    // 4. THE HAZARDOUS POOL (60% DANGER)
     const fishPool = [
-      { name: "🐟 Common Bass", chance: 0.50, mult: 2n, type: "catch" },
-      { name: "🐠 Tropical Tang", chance: 0.20, mult: 8n, type: "catch" },
-      { name: "🤮 𝐏𝐎𝐈𝐒𝐎𝐍 𝐅𝐈𝐒𝐇", chance: 0.08, mult: 0n, type: "poison" }, // 8% Hazard
-      { name: "💣 𝐁𝐎𝐌𝐁 𝐅𝐈𝐒𝐇", chance: 0.07, mult: 0n, type: "bomb" },     // 7% Hazard
-      { name: "🦈 Blue Shark", chance: 0.10, mult: 20n, type: "catch" },
-      { name: "✨ Golden Marlin", chance: 0.04, mult: 60n, type: "catch" },
-      { name: "👑 Sovereign Leviathan", chance: 0.01, mult: 250n, type: "catch" }
+      { name: "🐟 Common Bass", chance: 0.20, mult: 5n, type: "catch" },
+      { name: "🤮 𝐏𝐎𝐈𝐒𝐎𝐍 𝐅𝐈𝐒𝐇", chance: 0.30, mult: 0n, type: "poison" }, 
+      { name: "💣 𝐁𝐎𝐌𝐁 𝐅𝐈𝐒𝐇", chance: 0.30, mult: 0n, type: "bomb" },     
+      { name: "🐠 Tropical Tang", chance: 0.10, mult: 20n, type: "catch" },
+      { name: "🦈 Blue Shark", chance: 0.05, mult: 70n, type: "catch" },
+      { name: "👑 Sovereign Leviathan", chance: 0.05, mult: 1500n, type: "catch" }
     ];
 
     let catchResult = fishPool[0];
@@ -75,27 +79,40 @@ module.exports = {
     let status = "";
     let impactMsg = "";
 
+    // 5. PENALTY / REWARD LOGIC
     if (catchResult.type === "bomb") {
-      const loss = userMoney / 50n; // Only 2% loss
+      const loss = userMoney / 5n; // 20% loss
       finalBalance = userMoney - loss;
       status = "☣️ 𝐃𝐄𝐓𝐎𝐍𝐀𝐓𝐈𝐎𝐍!";
       impactMsg = `💸 𝐃𝐚𝐦𝐚𝐠𝐞: -$${fmt(loss)}\n⚠️ 𝐑𝐨𝐝 𝐃𝐚𝐦𝐚𝐠𝐞𝐝: Reset to Level 1`;
-      await usersData.set(senderID, { data: { ...userData.data, rodLevel: 1 } });
+      await usersData.set(senderID, { 
+        money: finalBalance.toString(),
+        data: { ...userData.data, money: finalBalance.toString(), rodLevel: 1 } 
+      });
     } 
     else if (catchResult.type === "poison") {
-      const loss = userMoney / 25n; // Only 4% loss
+      const loss = userMoney / 10n; // 10% loss
       finalBalance = userMoney - loss;
       status = "🧪 𝐓𝐎𝐗𝐈𝐂 𝐄𝐗𝐏𝐎𝐒𝐔𝐑𝐄!";
       impactMsg = `💸 𝐌𝐞𝐝𝐢𝐜𝐚𝐥 𝐅𝐞𝐞: -$${fmt(loss)}\n🍀 𝐑𝐨𝐝 𝐢𝐬 𝐬𝐚𝐟𝐞.`;
+      await usersData.set(senderID, { 
+        money: finalBalance.toString(),
+        data: { ...userData.data, money: finalBalance.toString() } 
+      });
     } 
     else {
-      const baseValue = 500n; // Lowered base to accommodate higher multipliers
+      const baseValue = 2000n; // Increased base reward for high risk
       const totalWin = catchResult.mult * currentRod.maxMult * baseValue;
       finalBalance = userMoney + totalWin;
       status = "🌊 𝐒𝐔𝐂𝐂𝐄𝐒𝐒𝐅𝐔𝐋 𝐇𝐀𝐔𝐋";
       impactMsg = `✨ 𝐘𝐢𝐞𝐥𝐝: ${catchResult.mult * currentRod.maxMult}𝐱\n💰 𝐏𝐫𝐨𝐟𝐢𝐭: +$${fmt(totalWin)}`;
+      await usersData.set(senderID, { 
+        money: finalBalance.toString(),
+        data: { ...userData.data, money: finalBalance.toString() } 
+      });
     }
 
+    // 6. UI OUTPUT
     let msg = `🏛️ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐓𝐈𝐃𝐄𝐒\n`;
     msg += `━━━━━━━━━━━━━━━━━━\n`;
     msg += `🎣 𝐑𝐨𝐝: ${currentRod.name}\n`;
@@ -104,11 +121,10 @@ module.exports = {
     msg += `${status}\n`;
     msg += `${impactMsg}\n`;
     msg += `━━━━━━━━━━━━━━━━━━\n`;
-    msg += `🏦 𝐁𝐀𝐋𝐀𝐍𝐂𝐄: $${fmt(finalBalance)}\n`;
+    msg += `🏦 𝐁𝐀𝐋𝐀𝐍𝐂𝐄: $${fmt(finalBalance < 0n ? 0n : finalBalance)}\n`;
     msg += `━━━━━━━━━━━━━━━━━━\n`;
     msg += `   𝐄𝐗𝐄𝐂𝐔𝐓𝐄𝐃 𝐁𝐘 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐄𝐋𝐈𝐓𝐄`;
 
-    await usersData.set(senderID, { data: { ...userData.data, money: finalBalance.toString() } });
     return api.sendMessage(msg, threadID, messageID);
   }
 };
