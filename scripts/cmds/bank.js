@@ -3,18 +3,18 @@ const fs = require("fs-extra");
 module.exports.config = {
   name: "bank",
   aliases: ["vault", "dep", "wd", "collect"],
-  version: "9.0",
+  version: "11.0",
   author: "Minh Anh",
   countDown: 5,
   role: 0,
-  shortDescription: "Secure Sovereign Vault with Interest Accrual",
+  shortDescription: "Secure Sovereign Vault with Daily Interest Accrual",
   category: "economy",
   guide: "{p}bank [deposit/withdraw/collect] [amount]"
 };
 
-// Interest Rate Configuration (e.g., 0.5% per collection)
+// Interest Rate Configuration
 const INTEREST_RATE = 0.005; 
-const COLLECTION_COOLDOWN = 3600000; // 1 Hour in milliseconds
+const COLLECTION_COOLDOWN = 86400000; // 24 Hours in milliseconds
 
 function formatBalance(num) {
   try {
@@ -51,20 +51,21 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
     const cash = BigInt(userData.data.money || 0);
     const vault = BigInt(userData.data.bank || 0);
 
-    // --- CASE: COLLECT INTEREST ---
+    // --- CASE: COLLECT INTEREST (Daily) ---
     if (action === "collect") {
       const now = Date.now();
       const lastCollect = userData.data.lastInterest;
 
       if (now - lastCollect < COLLECTION_COOLDOWN) {
         const remaining = COLLECTION_COOLDOWN - (now - lastCollect);
-        const mins = Math.floor(remaining / 60000);
-        return api.sendMessage(`⏳ 𝐏𝐫𝐨𝐭𝐨𝐜𝐨𝐥 𝐃𝐞𝐥𝐚𝐲: Interest is still maturing. Please return in ${mins} minutes.`, threadID, messageID);
+        const hours = Math.floor(remaining / 3600000);
+        const mins = Math.floor((remaining % 3600000) / 60000);
+        
+        return api.sendMessage(`⏳ 𝐏𝐫𝐨𝐭𝐨𝐜𝐨𝐥 𝐃𝐞𝐥𝐚𝐲: Interest matures every 24 hours.\n⚠️ 𝐑𝐞𝐭𝐮𝐫𝐧 𝐢𝐧: ${hours}h ${mins}m`, threadID, messageID);
       }
 
       if (vault <= 0n) return api.sendMessage("⚠️ 𝐕𝐚𝐮𝐥𝐭 𝐄𝐦𝐩𝐭𝐲: No assets found to generate interest.", threadID, messageID);
 
-      // Calculation using BigInt safety (vault * rate)
       const interestEarned = BigInt(Math.floor(Number(vault) * INTEREST_RATE));
       const newVault = vault + interestEarned;
 
@@ -73,7 +74,7 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
       });
 
       return api.sendMessage({
-        body: `📈 𝐈𝐍𝐓𝐄𝐑𝐄𝐒𝐓 𝐀𝐂𝐂𝐑𝐔𝐄𝐃\n` +
+        body: `📈 𝐃𝐀𝐈𝐋𝐘 𝐘𝐈𝐄𝐋𝐃 𝐀𝐂𝐂𝐑𝐔𝐄𝐃\n` +
               `━━━━━━━━━━━━━━━━━━\n` +
               `𝐀𝐬𝐬𝐞𝐭 𝐘𝐢𝐞𝐥𝐝: +$${formatBalance(interestEarned)}\n` +
               `𝐍𝐞𝐰 𝐕𝐚𝐮𝐥𝐭 𝐁𝐚𝐥𝐚𝐧𝐜𝐞: $${formatBalance(newVault)}\n` +
@@ -82,8 +83,9 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
       }, threadID, messageID);
     }
 
-    // --- CASE: NO ARGS (SHOW STATUS) ---
+    // --- CASE: STATUS VIEW ---
     if (!action) {
+      const projectedInterest = BigInt(Math.floor(Number(vault) * INTEREST_RATE));
       return api.sendMessage({
         body: `🏛️ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐕𝐀𝐔𝐋𝐓 𝐒𝐓𝐀𝐓𝐔𝐒\n` +
               `━━━━━━━━━━━━━━━━━━\n` +
@@ -91,7 +93,10 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
               `💰 𝐋𝐢𝐪𝐮𝐢𝐝 𝐂𝐚𝐬𝐡: $${formatBalance(cash)}\n` +
               `🏦 𝐕𝐚𝐮𝐥𝐭 𝐀𝐬𝐬𝐞𝐭𝐬: $${formatBalance(vault)}\n` +
               `━━━━━━━━━━━━━━━━━━\n` +
-              `𝐔𝐬𝐞: 'bank collect' to claim interest.`
+              `📈 𝐃𝐚𝐢𝐥𝐲 𝐘𝐢𝐞𝐥𝐝: +$${formatBalance(projectedInterest)}\n` +
+              `⚖️ 𝐈𝐧𝐭𝐞𝐫𝐞𝐬𝐭 𝐑𝐚𝐭𝐞: ${(INTEREST_RATE * 100).toFixed(1)}% / 𝟐𝟒𝐡\n` +
+              `━━━━━━━━━━━━━━━━━━\n` +
+              `𝐔𝐬𝐞: 'bank collect' once per day.`
       }, threadID, messageID);
     }
 
