@@ -12,9 +12,8 @@ module.exports.config = {
   guide: "{p}bank [deposit/withdraw/collect] [amount]"
 };
 
-// Interest Rate Configuration
 const INTEREST_RATE = 0.005; 
-const COLLECTION_COOLDOWN = 86400000; // 24 Hours in milliseconds
+const COLLECTION_COOLDOWN = 86400000;
 
 function formatBalance(num) {
   try {
@@ -45,13 +44,21 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
 
   try {
     const userData = await usersData.get(senderID);
+    
+    // FIX: Extract raw value from potential [object Object]
+    const extract = (val) => {
+      if (typeof val === 'object' && val !== null) return val.money || val.bank || Object.values(val)[0] || "0";
+      return val || "0";
+    };
+
+    if (!userData.data) userData.data = {};
     if (!userData.data.bank) userData.data.bank = "0";
     if (!userData.data.lastInterest) userData.data.lastInterest = 0;
     
-    const cash = BigInt(userData.data.money || 0);
-    const vault = BigInt(userData.data.bank || 0);
+    // FIX: Sanitize before BigInt conversion
+    const cash = BigInt(extract(userData.data.money || 0).toString().split('.')[0].replace(/[^0-9]/g, '') || "0");
+    const vault = BigInt(extract(userData.data.bank || 0).toString().split('.')[0].replace(/[^0-9]/g, '') || "0");
 
-    // --- CASE: COLLECT INTEREST (Daily) ---
     if (action === "collect") {
       const now = Date.now();
       const lastCollect = userData.data.lastInterest;
@@ -60,7 +67,6 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
         const remaining = COLLECTION_COOLDOWN - (now - lastCollect);
         const hours = Math.floor(remaining / 3600000);
         const mins = Math.floor((remaining % 3600000) / 60000);
-        
         return api.sendMessage(`⏳ 𝐏𝐫𝐨𝐭𝐨𝐜𝐨𝐥 𝐃𝐞𝐥𝐚𝐲: Interest matures every 24 hours.\n⚠️ 𝐑𝐞𝐭𝐮𝐫𝐧 𝐢𝐧: ${hours}h ${mins}m`, threadID, messageID);
       }
 
@@ -74,33 +80,17 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
       });
 
       return api.sendMessage({
-        body: `📈 𝐃𝐀𝐈𝐋𝐘 𝐘𝐈𝐄𝐋𝐃 𝐀𝐂𝐂𝐑𝐔𝐄𝐃\n` +
-              `━━━━━━━━━━━━━━━━━━\n` +
-              `𝐀𝐬𝐬𝐞𝐭 𝐘𝐢𝐞𝐥𝐝: +$${formatBalance(interestEarned)}\n` +
-              `𝐍𝐞𝐰 𝐕𝐚𝐮𝐥𝐭 𝐁𝐚𝐥𝐚𝐧𝐜𝐞: $${formatBalance(newVault)}\n` +
-              `━━━━━━━━━━━━━━━━━━\n` +
-              `Assets reinvested into the Sovereign Vault.`
+        body: `📈 𝐃𝐀𝐈𝐋𝐘 𝐘𝐈𝐄𝐋𝐃 𝐀𝐂𝐂𝐑𝐔𝐄𝐃\n━━━━━━━━━━━━━━━━━━\n𝐀𝐬𝐬𝐞𝐭 𝐘𝐢𝐞𝐥𝐝: +$${formatBalance(interestEarned)}\n𝐍𝐞𝐰 𝐕𝐚𝐮𝐥𝐭 𝐁𝐚𝐥𝐚𝐧𝐜𝐞: $${formatBalance(newVault)}\n━━━━━━━━━━━━━━━━━━\nAssets reinvested into the Sovereign Vault.`
       }, threadID, messageID);
     }
 
-    // --- CASE: STATUS VIEW ---
     if (!action) {
       const projectedInterest = BigInt(Math.floor(Number(vault) * INTEREST_RATE));
       return api.sendMessage({
-        body: `🏛️ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐕𝐀𝐔𝐋𝐓 𝐒𝐓𝐀𝐓𝐔𝐒\n` +
-              `━━━━━━━━━━━━━━━━━━\n` +
-              `👤 𝐇𝐨𝐥𝐝𝐞𝐫: ${userData.name}\n\n` +
-              `💰 𝐋𝐢𝐪𝐮𝐢𝐝 𝐂𝐚𝐬𝐡: $${formatBalance(cash)}\n` +
-              `🏦 𝐕𝐚𝐮𝐥𝐭 𝐀𝐬𝐬𝐞𝐭𝐬: $${formatBalance(vault)}\n` +
-              `━━━━━━━━━━━━━━━━━━\n` +
-              `📈 𝐃𝐚𝐢𝐥𝐲 𝐘𝐢𝐞𝐥𝐝: +$${formatBalance(projectedInterest)}\n` +
-              `⚖️ 𝐈𝐧𝐭𝐞𝐫𝐞𝐬𝐭 𝐑𝐚𝐭𝐞: ${(INTEREST_RATE * 100).toFixed(1)}% / 𝟐𝟒𝐡\n` +
-              `━━━━━━━━━━━━━━━━━━\n` +
-              `𝐔𝐬𝐞: 'bank collect' once per day.`
+        body: `🏛️ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐕𝐀𝐔𝐋𝐓 𝐒𝐓𝐀𝐓𝐔𝐒\n━━━━━━━━━━━━━━━━━━\n👤 𝐇𝐨𝐥𝐝𝐞𝐫: ${userData.name}\n\n💰 𝐋𝐢𝐪𝐮𝐢𝐝 𝐂𝐚𝐬𝐡: $${formatBalance(cash)}\n🏦 𝐕𝐚𝐮𝐥𝐭 𝐀𝐬𝐬𝐞𝐭𝐬: $${formatBalance(vault)}\n━━━━━━━━━━━━━━━━━━\n📈 𝐃𝐚𝐢𝐥𝐲 𝐘𝐢𝐞𝐥𝐝: +$${formatBalance(projectedInterest)}\n⚖️ 𝐈𝐧𝐭𝐞𝐫𝐞𝐬𝐭 𝐑𝐚𝐭𝐞: ${(INTEREST_RATE * 100).toFixed(1)}% / 𝟐𝟒𝐡\n━━━━━━━━━━━━━━━━━━\n𝐔𝐬𝐞: 'bank collect' once per day.`
       }, threadID, messageID);
     }
 
-    // --- DEPOSIT/WITHDRAW LOGIC ---
     let amount;
     if (amountInput?.toLowerCase() === "all") {
       amount = (action === "deposit" || action === "dep") ? cash : vault;
@@ -108,7 +98,7 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
       let cleanAmount = (amountInput || "0").replace(/,/g, '').toLowerCase();
       if (cleanAmount.includes('m')) amount = BigInt(parseFloat(cleanAmount) * 1e6);
       else if (cleanAmount.includes('b')) amount = BigInt(parseFloat(cleanAmount) * 1e9);
-      else amount = BigInt(cleanAmount.split('.')[0]);
+      else amount = BigInt(cleanAmount.split('.')[0].replace(/[^0-9]/g, '') || "0");
     }
 
     if (amount <= 0n) return api.sendMessage("⚠️ Invalid amount.", threadID, messageID);
@@ -130,6 +120,7 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
     }
 
   } catch (err) {
-    return api.sendMessage("⚠️ System Fault: Vault access suspended.", threadID, messageID);
+    console.error(err); // Logs the real error to Railway/Console
+    return api.sendMessage(`⚠️ System Fault: ${err.message}`, threadID, messageID);
   }
 };
