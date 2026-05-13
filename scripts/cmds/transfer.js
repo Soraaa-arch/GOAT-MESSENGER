@@ -13,7 +13,7 @@ module.exports = {
 
   onStart: async function ({ api, event, args, usersData }) {
     const { threadID, messageID, senderID, mentions } = event;
-    const ADMIN_UID = "YOUR_UID_HERE"; // Update this
+    const ADMIN_UID = "61576612175253"; // Update this
 
     if (Object.keys(mentions).length === 0) return api.sendMessage("⚠️ 𝐓𝐚𝐠 𝐫𝐞𝐜𝐢𝐩𝐢𝐞𝐧𝐭.", threadID, messageID);
 
