@@ -4,36 +4,29 @@ module.exports = {
   config: {
     name: "fish",
     aliases: ["fishing", "catch"],
-    version: "4.1.0",
+    version: "4.2.0",
     author: "Minh Anh",
-    countDown: 300, // Main fishing cooldown (5 minutes)
+    countDown: 0, // Manual cooldown management
     role: 0,
     category: "economy",
-    guide: {
-      en: "{p}fish [catch/upgrade]"
-    }
+    guide: { en: "{p}fish [catch/upgrade]" }
   },
 
   onStart: async function ({ api, event, args, usersData }) {
     const { threadID, messageID, senderID } = event;
-    const ADMIN_UID = "61576612175253"; 
-    const WIN_TAX_RATE = 0.05; 
+    const ADMIN_UID = "61576612175253";
+    const WIN_TAX_RATE = 0.05;
 
-    // Custom Cooldown Logic for Upgrade
+    // Initialize Global Cooldowns
+    if (!global.client.fishCatchCooldown) global.client.fishCatchCooldown = new Map();
     if (!global.client.fishUpgradeCooldown) global.client.fishUpgradeCooldown = new Map();
-    
+
     try {
       const userData = await usersData.get(senderID);
+      const extract = (val) => (typeof val === 'object' && val !== null) ? (val.money || val.bank || Object.values(val)[0] || "0") : (val || "0");
       
-      const extract = (val) => {
-        if (typeof val === 'object' && val !== null) {
-          return val.money || val.bank || Object.values(val)[0] || "0";
-        }
-        return val || "0";
-      };
-
-      const rawMoney = extract(userData.data?.money || userData.money).toString().split('.')[0].split('e')[0];
-      const userMoney = BigInt(rawMoney.replace(/[^0-9]/g, '') || "0");
+      const rawMoney = extract(userData.data?.money || userData.money).toString().split('.')[0].replace(/[^0-9]/g, '');
+      const userMoney = BigInt(rawMoney || "0");
 
       if (!userData.data.rodLevel) userData.data.rodLevel = 1;
       let rodLevel = parseInt(userData.data.rodLevel);
@@ -44,60 +37,58 @@ module.exports = {
         { name: "🔱 Sovereign Harpoon", price: 50000000n, breakChance: 0.05, maxMult: 300n }
       ];
 
-      const currentRod = rods[rodLevel - 1];
+      const now = Date.now();
 
-      // --- UPGRADE LOGIC WITH 5s COOLDOWN ---
+      // --- UPGRADE PROTOCOL (5s CD) ---
       if (args[0] === "upgrade") {
         const lastUpgrade = global.client.fishUpgradeCooldown.get(senderID) || 0;
-        const now = Date.now();
-        const cooldownTime = 5 * 1000; // 5 seconds
-
-        if (now - lastUpgrade < cooldownTime) {
-          const remaining = Math.ceil((cooldownTime - (now - lastUpgrade)) / 1000);
-          return api.sendMessage(`⏳ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐏𝐀𝐔𝐒𝐄\n━━━━━━━━━━━━━━━━━━\nPlease wait ${remaining}s before upgrading again.`, threadID, messageID);
+        if (now - lastUpgrade < 5000) {
+          const rem = Math.ceil((5000 - (now - lastUpgrade)) / 1000);
+          return api.sendMessage(`⏳ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐏𝐀𝐔𝐒𝐄\n━━━━━━━━━━━━━━━━━━\nUpgrade available in: ${rem}s`, threadID, messageID);
         }
 
         if (rodLevel >= rods.length) return api.sendMessage("✨ 𝐘𝐨𝐮 𝐚𝐥𝐫𝐞𝐚𝐝𝐲 𝐰𝐢𝐞𝐥𝐝 𝐭𝐡𝐞 𝐒𝐨𝐯𝐞𝐫𝐞𝐢𝐠𝐧 𝐇𝐚𝐫𝐩𝐨𝐨𝐧.", threadID, messageID);
-        
         const nextRod = rods[rodLevel];
         if (userMoney < nextRod.price) return api.sendMessage(`❌ 𝐈𝐍𝐒𝐔𝐅𝐅𝐈𝐂𝐈𝐄𝐍𝐓 𝐂𝐑𝐄𝐃𝐈𝐓𝐒.\nRequired: $${fmt(nextRod.price)}`, threadID, messageID);
 
-        const finalBalance = userMoney - nextRod.price;
-        
-        // Set the 5s cooldown timestamp
         global.client.fishUpgradeCooldown.set(senderID, now);
-
-        await usersData.set(senderID, { 
-          money: finalBalance.toString(),
-          data: { ...userData.data, money: finalBalance.toString(), rodLevel: rodLevel + 1 } 
-        });
+        const finalBalance = (userMoney - nextRod.price).toString();
+        await usersData.set(senderID, { money: finalBalance, data: { ...userData.data, money: finalBalance, rodLevel: rodLevel + 1 } });
         
         return api.sendMessage(`🛠️ 𝐑𝐎𝐃 𝐔𝐏𝐆𝐑𝐀𝐃𝐄𝐃\n━━━━━━━━━━━━━━━━━━\nNew Rod: ${nextRod.name}\nCost: -$${fmt(nextRod.price)}\n━━━━━━━━━━━━━━━━━━\n🏦 𝐁𝐚𝐥𝐚𝐧𝐜𝐞: $${fmt(finalBalance)}`, threadID, messageID);
       }
 
-      // --- FISHING LOGIC (Main 300s Cooldown applies here) ---
+      // --- CATCH PROTOCOL (300s CD) ---
+      const lastCatch = global.client.fishCatchCooldown.get(senderID) || 0;
+      if (now - lastCatch < 300000) {
+        const rem = Math.ceil((300000 - (now - lastCatch)) / 1000);
+        return api.sendMessage(`⏳ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐓𝐈𝐃𝐄𝐒\n━━━━━━━━━━━━━━━━━━\nFishing available in: ${Math.floor(rem / 60)}m ${rem % 60}s`, threadID, messageID);
+      }
+
+      const currentRod = rods[rodLevel - 1];
+
+      // Break Chance Logic
       if (Math.random() < currentRod.breakChance) {
         await usersData.set(senderID, { data: { ...userData.data, rodLevel: 1 } });
         return api.sendMessage(`💥 𝐒𝐍𝐀𝐏!\n━━━━━━━━━━━━━━━━━━\nYour ${currentRod.name} has shattered.\n⚠️ 𝐑𝐨𝐝 𝐫𝐞𝐬𝐞𝐭 𝐭𝐨 𝐁𝐚𝐦𝐛𝐨𝐨 Stick.`, threadID, messageID);
       }
 
+      global.client.fishCatchCooldown.set(senderID, now);
+
       const fishPool = [
         { name: "🐟 Common Bass", chance: 0.35, mult: 10n, type: "catch" },
-        { name: "🤮 𝐏𝐎𝐈𝐒𝐎𝐍 𝐅𝐈𝐒𝐇", chance: 0.20, mult: 0n, type: "poison" }, 
-        { name: "💣 𝐁𝐎𝐌𝐁 𝐅𝐈𝐒𝐇", chance: 0.15, mult: 0n, type: "bomb" },      
+        { name: "🤮 𝐏𝐎𝐈𝐒𝐎𝐍 𝐅𝐈𝐒𝐇", chance: 0.20, mult: 0n, type: "poison" },
+        { name: "💣 𝐁𝐎𝐌𝐁 𝐅𝐈𝐒𝐇", chance: 0.15, mult: 0n, type: "bomb" },
         { name: "🐠 Tropical Tang", chance: 0.15, mult: 30n, type: "catch" },
         { name: "🦈 Blue Shark", chance: 0.10, mult: 120n, type: "catch" },
         { name: "👑 Sovereign Leviathan", chance: 0.05, mult: 2500n, type: "catch" }
       ];
 
       let catchResult = fishPool[0];
-      let r = Math.random();
-      let accum = 0;
+      let r = Math.random(), accum = 0;
       for (const fish of fishPool) {
         accum += fish.chance;
-        if (r <= accum) {
-          catchResult = fish; break;
-        }
+        if (r <= accum) { catchResult = fish; break; }
       }
 
       let finalBalance = userMoney;
@@ -110,30 +101,23 @@ module.exports = {
         status = "☣️ 𝐃𝐄𝐓𝐎𝐍𝐀𝐓𝐈𝐎𝐍!";
         impactMsg = `💸 𝐃𝐚𝐦𝐚𝐠𝐞: -$${fmt(loss)}\n⚠️ 𝐑𝐨𝐝 𝐑𝐞𝐬𝐞𝐭`;
         await usersData.set(senderID, { money: finalBalance.toString(), data: { ...userData.data, money: finalBalance.toString(), rodLevel: 1 } });
-      } 
-      else if (catchResult.type === "poison") {
+      } else if (catchResult.type === "poison") {
         const loss = userMoney / 10n;
         finalBalance = userMoney - loss;
         status = "🧪 𝐓𝐎𝐗𝐈𝐂 𝐄𝐗𝐏𝐎𝐒𝐔𝐑𝐄!";
         impactMsg = `💸 𝐌𝐞𝐝𝐢𝐜𝐚𝐥 𝐅𝐞𝐞: -$${fmt(loss)}`;
         await usersData.set(senderID, { money: finalBalance.toString(), data: { ...userData.data, money: finalBalance.toString() } });
-      } 
-      else {
-        const baseValue = 1000n;
-        const totalWin = catchResult.mult * currentRod.maxMult * baseValue;
-        
+      } else {
+        const totalWin = catchResult.mult * currentRod.maxMult * 1000n;
         const taxAmount = BigInt(Math.floor(Number(totalWin) * WIN_TAX_RATE));
         const netWin = totalWin - taxAmount;
-        
         finalBalance = userMoney + netWin;
         status = "🌊 𝐒𝐔𝐂𝐂𝐄𝐒𝐒𝐅𝐔𝐋 𝐇𝐀𝐔𝐋";
         impactMsg = `💰 𝐆𝐫𝐨𝐬𝐬: +$${fmt(totalWin)}\n⚖️ 𝐑𝐨𝐲𝐚𝐥 𝐓𝐚𝐱 (𝟓%): -$${fmt(taxAmount)}\n🎁 𝐍𝐞𝐭 𝐏𝐫𝐨𝐟𝐢𝐭: +$${fmt(netWin)}`;
 
         const adminData = await usersData.get(ADMIN_UID);
-        const adminMoneyRaw = extract(adminData.data?.money || adminData.money);
-        const adminBalance = BigInt(adminMoneyRaw.toString().split('.')[0]) + taxAmount;
-        await usersData.set(ADMIN_UID, { money: adminBalance.toString(), data: { ...adminData.data, money: adminBalance.toString() } });
-
+        const adminBal = BigInt(extract(adminData.data?.money || adminData.money).split('.')[0]) + taxAmount;
+        await usersData.set(ADMIN_UID, { money: adminBal.toString(), data: { ...adminData.data, money: adminBal.toString() } });
         await usersData.set(senderID, { money: finalBalance.toString(), data: { ...userData.data, money: finalBalance.toString() } });
       }
 
