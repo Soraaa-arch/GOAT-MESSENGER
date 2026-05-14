@@ -4,9 +4,9 @@ module.exports = {
   config: {
     name: "fish",
     aliases: ["fishing", "catch"],
-    version: "4.0.1",
+    version: "4.1.0",
     author: "Minh Anh",
-    countDown: 300, 
+    countDown: 300, // Main fishing cooldown (5 minutes)
     role: 0,
     category: "economy",
     guide: {
@@ -16,16 +16,15 @@ module.exports = {
 
   onStart: async function ({ api, event, args, usersData }) {
     const { threadID, messageID, senderID } = event;
-
-    // --- SOVEREIGN CONFIGURATION ---
     const ADMIN_UID = "61576612175253"; 
     const WIN_TAX_RATE = 0.05; 
-    // -------------------------------
 
+    // Custom Cooldown Logic for Upgrade
+    if (!global.client.fishUpgradeCooldown) global.client.fishUpgradeCooldown = new Map();
+    
     try {
       const userData = await usersData.get(senderID);
       
-      // FIX: Deep-Drill extraction to prevent [object Object] crash
       const extract = (val) => {
         if (typeof val === 'object' && val !== null) {
           return val.money || val.bank || Object.values(val)[0] || "0";
@@ -47,24 +46,39 @@ module.exports = {
 
       const currentRod = rods[rodLevel - 1];
 
-      // --- UPGRADE LOGIC ---
+      // --- UPGRADE LOGIC WITH 5s COOLDOWN ---
       if (args[0] === "upgrade") {
+        const lastUpgrade = global.client.fishUpgradeCooldown.get(senderID) || 0;
+        const now = Date.now();
+        const cooldownTime = 5 * 1000; // 5 seconds
+
+        if (now - lastUpgrade < cooldownTime) {
+          const remaining = Math.ceil((cooldownTime - (now - lastUpgrade)) / 1000);
+          return api.sendMessage(`⏳ 𝐒𝐎𝐕𝐄𝐑𝐄𝐈𝐆𝐍 𝐏𝐀𝐔𝐒𝐄\n━━━━━━━━━━━━━━━━━━\nPlease wait ${remaining}s before upgrading again.`, threadID, messageID);
+        }
+
         if (rodLevel >= rods.length) return api.sendMessage("✨ 𝐘𝐨𝐮 𝐚𝐥𝐫𝐞𝐚𝐝𝐲 𝐰𝐢𝐞𝐥𝐝 𝐭𝐡𝐞 𝐒𝐨𝐯𝐞𝐫𝐞𝐢𝐠𝐧 𝐇𝐚𝐫𝐩𝐨𝐨𝐧.", threadID, messageID);
+        
         const nextRod = rods[rodLevel];
         if (userMoney < nextRod.price) return api.sendMessage(`❌ 𝐈𝐍𝐒𝐔𝐅𝐅𝐈𝐂𝐈𝐄𝐍𝐓 𝐂𝐑𝐄𝐃𝐈𝐓𝐒.\nRequired: $${fmt(nextRod.price)}`, threadID, messageID);
 
         const finalBalance = userMoney - nextRod.price;
+        
+        // Set the 5s cooldown timestamp
+        global.client.fishUpgradeCooldown.set(senderID, now);
+
         await usersData.set(senderID, { 
           money: finalBalance.toString(),
           data: { ...userData.data, money: finalBalance.toString(), rodLevel: rodLevel + 1 } 
         });
+        
         return api.sendMessage(`🛠️ 𝐑𝐎𝐃 𝐔𝐏𝐆𝐑𝐀𝐃𝐄𝐃\n━━━━━━━━━━━━━━━━━━\nNew Rod: ${nextRod.name}\nCost: -$${fmt(nextRod.price)}\n━━━━━━━━━━━━━━━━━━\n🏦 𝐁𝐚𝐥𝐚𝐧𝐜𝐞: $${fmt(finalBalance)}`, threadID, messageID);
       }
 
-      // --- BREAK CHANCE ---
+      // --- FISHING LOGIC (Main 300s Cooldown applies here) ---
       if (Math.random() < currentRod.breakChance) {
         await usersData.set(senderID, { data: { ...userData.data, rodLevel: 1 } });
-        return api.sendMessage(`💥 𝐒𝐍𝐀𝐏!\n━━━━━━━━━━━━━━━━━━\nYour ${currentRod.name} has shattered.\n⚠️ 𝐑𝐨𝐝 𝐫𝐞𝐬𝐞𝐭 𝐭𝐨 𝐁𝐚mboo Stick.`, threadID, messageID);
+        return api.sendMessage(`💥 𝐒𝐍𝐀𝐏!\n━━━━━━━━━━━━━━━━━━\nYour ${currentRod.name} has shattered.\n⚠️ 𝐑𝐨𝐝 𝐫𝐞𝐬𝐞𝐭 𝐭𝐨 𝐁𝐚𝐦𝐛𝐨𝐨 Stick.`, threadID, messageID);
       }
 
       const fishPool = [
